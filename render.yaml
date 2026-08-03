@@ -1,6 +1,5 @@
 # ==============================================================================
-# Render Blueprint (Infrastructure-as-Code) Configuration - Docker Deployment
-# Deploys both FastAPI backend service and Streamlit frontend dashboard using Docker
+# Render Blueprint Configuration - Docker Containers Deployment
 # ==============================================================================
 services:
   # ----------------------------------------------------------------------------
@@ -9,7 +8,7 @@ services:
   - type: web
     name: telecom-churn-api
     env: docker
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: Dockerfile
     region: oregon
     plan: free
     envVars:
@@ -25,7 +24,7 @@ services:
   - type: web
     name: telecom-churn-frontend
     env: docker
-    dockerfilePath: ./Dockerfile.frontend
+    dockerfilePath: Dockerfile.frontend
     region: oregon
     plan: free
     envVars:
