@@ -192,7 +192,74 @@ with st.sidebar:
 
 
 # -----------------------------------------------------------------------------
-# 3. View Router: Render Selected Sidebar Page
+# 3. Helper Function to Initialize Session State Form Values
+# -----------------------------------------------------------------------------
+def set_preset_session_state(preset_name: str):
+    if preset_name == "High Risk Profile":
+        st.session_state["f_gender"] = "Female"
+        st.session_state["f_senior"] = 0
+        st.session_state["f_partner"] = "No"
+        st.session_state["f_dep"] = "No"
+        st.session_state["f_tenure"] = 1
+        st.session_state["f_phone"] = "Yes"
+        st.session_state["f_multi"] = "No"
+        st.session_state["f_net"] = "Fiber optic"
+        st.session_state["f_sec"] = "No"
+        st.session_state["f_back"] = "No"
+        st.session_state["f_prot"] = "No"
+        st.session_state["f_tech"] = "No"
+        st.session_state["f_tv"] = "No"
+        st.session_state["f_mov"] = "No"
+        st.session_state["f_contract"] = "Month-to-month"
+        st.session_state["f_paper"] = "Yes"
+        st.session_state["f_pay"] = "Electronic check"
+        st.session_state["f_monthly"] = 85.50
+        st.session_state["f_total"] = 85.50
+    elif preset_name == "Loyal Profile":
+        st.session_state["f_gender"] = "Male"
+        st.session_state["f_senior"] = 0
+        st.session_state["f_partner"] = "Yes"
+        st.session_state["f_dep"] = "Yes"
+        st.session_state["f_tenure"] = 65
+        st.session_state["f_phone"] = "Yes"
+        st.session_state["f_multi"] = "Yes"
+        st.session_state["f_net"] = "DSL"
+        st.session_state["f_sec"] = "Yes"
+        st.session_state["f_back"] = "Yes"
+        st.session_state["f_prot"] = "Yes"
+        st.session_state["f_tech"] = "Yes"
+        st.session_state["f_tv"] = "Yes"
+        st.session_state["f_mov"] = "Yes"
+        st.session_state["f_contract"] = "Two year"
+        st.session_state["f_paper"] = "No"
+        st.session_state["f_pay"] = "Bank transfer (automatic)"
+        st.session_state["f_monthly"] = 60.00
+        st.session_state["f_total"] = 3900.00
+    else:  # Default / Manual Input
+        if "f_gender" not in st.session_state:
+            st.session_state["f_gender"] = "Female"
+            st.session_state["f_senior"] = 0
+            st.session_state["f_partner"] = "Yes"
+            st.session_state["f_dep"] = "No"
+            st.session_state["f_tenure"] = 12
+            st.session_state["f_phone"] = "Yes"
+            st.session_state["f_multi"] = "No"
+            st.session_state["f_net"] = "Fiber optic"
+            st.session_state["f_sec"] = "No"
+            st.session_state["f_back"] = "Yes"
+            st.session_state["f_prot"] = "No"
+            st.session_state["f_tech"] = "No"
+            st.session_state["f_tv"] = "Yes"
+            st.session_state["f_mov"] = "No"
+            st.session_state["f_contract"] = "Month-to-month"
+            st.session_state["f_paper"] = "Yes"
+            st.session_state["f_pay"] = "Electronic check"
+            st.session_state["f_monthly"] = 70.35
+            st.session_state["f_total"] = 844.20
+
+
+# -----------------------------------------------------------------------------
+# 4. View Router: Render Selected Sidebar Page
 # -----------------------------------------------------------------------------
 
 # =============================================================================
@@ -292,57 +359,154 @@ elif menu_choice == "🔮 Make Prediction":
     </div>
     """, unsafe_allow_html=True)
 
-    # Preset Selection Radio
-    preset = st.radio("⚡ Load Preset Customer Profile:", options=["Manual Input", "High Risk Profile", "Loyal Profile"], horizontal=True)
+    # Preset Quick Action Buttons
+    p_col1, p_col2, p_col3 = st.columns([1, 1, 2])
+    with p_col1:
+        if st.button("⚡ Load High Risk Profile", use_container_width=True):
+            set_preset_session_state("High Risk Profile")
+            st.rerun()
+    with p_col2:
+        if st.button("🛡️ Load Loyal Customer Profile", use_container_width=True):
+            set_preset_session_state("Loyal Profile")
+            st.rerun()
+    with p_col3:
+        if st.button("🔄 Reset Default Values", use_container_width=True):
+            set_preset_session_state("Manual Input")
+            st.rerun()
 
-    if preset == "High Risk Profile":
-        d_gender, d_senior, d_partner, d_dep, d_tenure = "Female", 0, "No", "No", 1
-        d_phone, d_multi, d_net, d_sec, d_back = "Yes", "No", "Fiber optic", "No", "No"
-        d_prot, d_tech, d_tv, d_mov = "No", "No", "No", "No"
-        d_contract, d_paper, d_pay = "Month-to-month", "Yes", "Electronic check"
-        d_monthly, d_total = 85.50, 85.50
-    elif preset == "Loyal Profile":
-        d_gender, d_senior, d_partner, d_dep, d_tenure = "Male", 0, "Yes", "Yes", 65
-        d_phone, d_multi, d_net, d_sec, d_back = "Yes", "Yes", "DSL", "Yes", "Yes"
-        d_prot, d_tech, d_tv, d_mov = "Yes", "Yes", "Yes", "Yes"
-        d_contract, d_paper, d_pay = "Two year", "No", "Bank transfer (automatic)"
-        d_monthly, d_total = 60.00, 3900.00
-    else:
-        d_gender, d_senior, d_partner, d_dep, d_tenure = "Female", 0, "Yes", "No", 12
-        d_phone, d_multi, d_net, d_sec, d_back = "Yes", "No", "Fiber optic", "No", "Yes"
-        d_prot, d_tech, d_tv, d_mov = "No", "No", "Yes", "No"
-        d_contract, d_paper, d_pay = "Month-to-month", "Yes", "Electronic check"
-        d_monthly, d_total = 70.35, 844.20
+    # Ensure Session State Initialization
+    set_preset_session_state("Manual Input")
 
+    # Interactive Form with All 19 Explicit Feature Controls
     with st.form("prediction_input_form"):
         st.markdown('<div class="section-title">👤 1. Customer Demographics</div>', unsafe_allow_html=True)
         c1, c2, c3, c4 = st.columns(4)
-        with c1: gender = st.selectbox("Gender", options=["Female", "Male"], index=0 if d_gender == "Female" else 1)
-        with c2: senior_citizen = st.selectbox("Senior Citizen (>=65)", options=[0, 1], index=d_senior)
-        with c3: partner = st.selectbox("Has Partner", options=["Yes", "No"], index=0 if d_partner == "Yes" else 1)
-        with c4: dependents = st.selectbox("Has Dependents", options=["Yes", "No"], index=0 if d_dep == "Yes" else 1)
+        with c1:
+            gender = st.selectbox(
+                "Gender",
+                options=["Female", "Male"],
+                index=0 if st.session_state.get("f_gender", "Female") == "Female" else 1
+            )
+        with c2:
+            senior_citizen = st.selectbox(
+                "Senior Citizen (>=65)",
+                options=[0, 1],
+                index=st.session_state.get("f_senior", 0)
+            )
+        with c3:
+            partner = st.selectbox(
+                "Has Partner",
+                options=["Yes", "No"],
+                index=0 if st.session_state.get("f_partner", "Yes") == "Yes" else 1
+            )
+        with c4:
+            dependents = st.selectbox(
+                "Has Dependents",
+                options=["Yes", "No"],
+                index=0 if st.session_state.get("f_dep", "No") == "Yes" else 1
+            )
 
-        st.markdown('<div class="section-title">🌐 2. Services & Network Add-Ons</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">🌐 2. Core Connectivity & Services</div>', unsafe_allow_html=True)
         c5, c6, c7 = st.columns(3)
-        with c5: phone_service = st.selectbox("Phone Service", options=["Yes", "No"], index=0 if d_phone == "Yes" else 1)
-        with c6: multiple_lines = st.selectbox("Multiple Lines", options=["No phone service", "No", "Yes"], index=["No phone service", "No", "Yes"].index(d_multi))
-        with c7: internet_service = st.selectbox("Internet Service", options=["Fiber optic", "DSL", "No"], index=["Fiber optic", "DSL", "No"].index(d_net))
+        with c5:
+            phone_service = st.selectbox(
+                "Phone Service",
+                options=["Yes", "No"],
+                index=0 if st.session_state.get("f_phone", "Yes") == "Yes" else 1
+            )
+        with c6:
+            multiple_lines = st.selectbox(
+                "Multiple Lines",
+                options=["No phone service", "No", "Yes"],
+                index=["No phone service", "No", "Yes"].index(st.session_state.get("f_multi", "No"))
+            )
+        with c7:
+            internet_service = st.selectbox(
+                "Internet Service Provider",
+                options=["Fiber optic", "DSL", "No"],
+                index=["Fiber optic", "DSL", "No"].index(st.session_state.get("f_net", "Fiber optic"))
+            )
 
+        st.markdown('<div class="section-title">🛡️ 3. Digital Add-Ons & Security Features</div>', unsafe_allow_html=True)
         c8, c9, c10 = st.columns(3)
-        with c8: online_security = st.selectbox("Online Security", options=["No internet service", "No", "Yes"], index=["No internet service", "No", "Yes"].index(d_sec))
-        with c9: tech_support = st.selectbox("Tech Support", options=["No internet service", "No", "Yes"], index=["No internet service", "No", "Yes"].index(d_tech))
-        with c10: online_backup = st.selectbox("Online Backup", options=["No internet service", "No", "Yes"], index=["No internet service", "No", "Yes"].index(d_back))
+        with c8:
+            online_security = st.selectbox(
+                "Online Security",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_sec", "No"))
+            )
+            online_backup = st.selectbox(
+                "Online Backup",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_back", "Yes"))
+            )
+        with c9:
+            device_protection = st.selectbox(
+                "Device Protection",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_prot", "No"))
+            )
+            tech_support = st.selectbox(
+                "Tech Support",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_tech", "No"))
+            )
+        with c10:
+            streaming_tv = st.selectbox(
+                "Streaming TV",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_tv", "Yes"))
+            )
+            streaming_movies = st.selectbox(
+                "Streaming Movies",
+                options=["No internet service", "No", "Yes"],
+                index=["No internet service", "No", "Yes"].index(st.session_state.get("f_mov", "No"))
+            )
 
-        st.markdown('<div class="section-title">💳 3. Contract & Financial Details</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">💳 4. Billing, Charges & Contract Term</div>', unsafe_allow_html=True)
         c11, c12, c13 = st.columns(3)
-        with c11: tenure = st.number_input("Tenure (Months)", min_value=0, max_value=120, value=d_tenure)
-        with c12: contract = st.selectbox("Contract Type", options=["Month-to-month", "One year", "Two year"], index=["Month-to-month", "One year", "Two year"].index(d_contract))
-        with c13: payment_method = st.selectbox("Payment Method", options=["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"], index=["Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"].index(d_pay))
+        with c11:
+            tenure = st.number_input(
+                "Tenure (Months)",
+                min_value=0,
+                max_value=120,
+                value=int(st.session_state.get("f_tenure", 12))
+            )
+            contract = st.selectbox(
+                "Contract Type",
+                options=["Month-to-month", "One year", "Two year"],
+                index=["Month-to-month", "One year", "Two year"].index(st.session_state.get("f_contract", "Month-to-month"))
+            )
+        with c12:
+            paperless_billing = st.selectbox(
+                "Paperless Billing",
+                options=["Yes", "No"],
+                index=0 if st.session_state.get("f_paper", "Yes") == "Yes" else 1
+            )
+            payment_method = st.selectbox(
+                "Payment Method",
+                options=[
+                    "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
+                ],
+                index=[
+                    "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
+                ].index(st.session_state.get("f_pay", "Electronic check"))
+            )
+        with c13:
+            monthly_charges = st.number_input(
+                "Monthly Charges ($)",
+                min_value=0.0,
+                max_value=300.0,
+                value=float(st.session_state.get("f_monthly", 70.35))
+            )
+            total_charges = st.number_input(
+                "Total Charges ($)",
+                min_value=0.0,
+                max_value=10000.0,
+                value=float(st.session_state.get("f_total", 844.20))
+            )
 
-        c14, c15 = st.columns(2)
-        with c14: monthly_charges = st.number_input("Monthly Charges ($)", min_value=0.0, max_value=300.0, value=float(d_monthly))
-        with c15: total_charges = st.number_input("Total Charges ($)", min_value=0.0, max_value=10000.0, value=float(d_total))
-
+        st.markdown("<br>", unsafe_allow_html=True)
         submit_btn = st.form_submit_button("🔍 Execute Prediction Model", type="primary", use_container_width=True)
 
     if submit_btn:
@@ -357,12 +521,12 @@ elif menu_choice == "🔮 Make Prediction":
             "InternetService": internet_service,
             "OnlineSecurity": online_security,
             "OnlineBackup": online_backup,
-            "DeviceProtection": d_prot,
+            "DeviceProtection": device_protection,
             "TechSupport": tech_support,
-            "StreamingTV": d_tv,
-            "StreamingMovies": d_mov,
+            "StreamingTV": streaming_tv,
+            "StreamingMovies": streaming_movies,
             "Contract": contract,
-            "PaperlessBilling": d_paper,
+            "PaperlessBilling": paperless_billing,
             "PaymentMethod": payment_method,
             "MonthlyCharges": float(monthly_charges),
             "TotalCharges": float(total_charges)
