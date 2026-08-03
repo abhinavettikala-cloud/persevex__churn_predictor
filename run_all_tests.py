@@ -25,6 +25,7 @@ def run_test_suite():
         "tests.test_services",
         "tests.test_fastapi_endpoints",
         "tests.test_edge_cases",
+        "tests.test_db_repository",
         "test_prediction_service",
         "test_api",
         "test_streamlit"
