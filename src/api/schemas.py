@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Literal, List, Dict, Any
+from typing import Optional, Literal
 from datetime import datetime
 
 class ChurnPredictionRequest(BaseModel):
@@ -119,9 +119,8 @@ class ChurnPredictionRequest(BaseModel):
 
 class ChurnPredictionResponse(BaseModel):
     """
-    Pydantic response schema for prediction endpoints with explainability metadata.
+    Pydantic response schema for prediction endpoints.
     """
-    id: Optional[str] = Field(default=None, description="Unique prediction record identifier")
     prediction: Literal["Churn", "No Churn"] = Field(
         description="Predicted churn category ('Churn' or 'No Churn')"
     )
@@ -137,14 +136,9 @@ class ChurnPredictionResponse(BaseModel):
     risk_level: Literal["Low", "Medium", "High"] = Field(
         description="Churn risk tier based on probability threshold ('Low', 'Medium', 'High')"
     )
-    execution_time_ms: Optional[float] = Field(default=12.5, description="Inference latency in milliseconds")
-    model_version: Optional[str] = Field(default="v1.0.0-LogisticRegression", description="Trained model version tag")
     timestamp: str = Field(
         description="ISO 8601 formatted prediction timestamp"
     )
-    top_positive_factors: Optional[List[Dict[str, str]]] = Field(default=[], description="Factors driving churn risk higher")
-    top_negative_factors: Optional[List[Dict[str, str]]] = Field(default=[], description="Factors protecting against churn")
-    explanation_text: Optional[str] = Field(default="", description="Plain English rule-based explanation summary")
 
 
 class HealthResponse(BaseModel):
@@ -156,64 +150,3 @@ class HealthResponse(BaseModel):
     scaler_loaded: bool = Field(description="Whether scaler artifact is loaded")
     encoder_loaded: bool = Field(description="Whether encoder artifact is loaded")
     timestamp: str = Field(description="ISO 8601 server timestamp")
-
-
-class DashboardStatsResponse(BaseModel):
-    total_predictions: int
-    today_predictions: int
-    churn_predictions: int
-    non_churn_predictions: int
-    avg_confidence: float
-    avg_response_time_ms: float
-    model_version: str
-    api_status: str
-    recent_trends: List[Dict[str, Any]]
-
-
-class HistoryResponse(BaseModel):
-    items: List[Dict[str, Any]]
-    total_count: int
-    page: int
-    page_size: int
-
-
-class AnalyticsSummaryResponse(BaseModel):
-    contract_distribution: Dict[str, int]
-    internet_distribution: Dict[str, int]
-    payment_distribution: Dict[str, int]
-    risk_metrics: Dict[str, Any]
-
-
-class ModelPerformanceResponse(BaseModel):
-    model_name: str
-    algorithm: str
-    version: str
-    training_date: str
-    dataset_name: str
-    training_samples: int
-    testing_samples: int
-    number_of_features: int
-    model_size: str
-    training_time_seconds: float
-    avg_inference_time_ms: float
-    accuracy: float
-    precision: float
-    recall: float
-    f1_score: float
-    roc_auc: float
-    log_loss: float
-    cross_val_score: float
-    model_comparison: List[Dict[str, Any]]
-    best_model_name: str
-    selection_rationale: str
-
-
-class SystemStatusResponse(BaseModel):
-    api_status: str
-    backend_status: str
-    model_status: str
-    database_status: str
-    current_model_version: str
-    last_prediction_time: str
-    average_response_time_ms: float
-    application_uptime_hours: float
