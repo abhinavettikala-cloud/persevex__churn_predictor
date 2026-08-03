@@ -1,0 +1,192 @@
+{
+	"info": {
+		"_postman_id": "a9b8c7d6-e5f4-4a3b-8c2d-1e0f9a8b7c6d",
+		"name": "Telecom Customer Churn API",
+		"description": "Production Postman v2.1 Collection for Telecom Customer Churn Prediction REST API.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Root Endpoint",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": ["{{baseUrl}}"],
+					"path": [""]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200 OK', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Verify API status is online', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('online');",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Health Diagnostics Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/health",
+					"host": ["{{baseUrl}}"],
+					"path": ["health"]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200 OK', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Verify ML artifacts loaded', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.status).to.eql('ok');",
+							"    pm.expect(jsonData.model_loaded).to.eql(true);",
+							"    pm.expect(jsonData.scaler_loaded).to.eql(true);",
+							"    pm.expect(jsonData.encoder_loaded).to.eql(true);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Predict - High Churn Risk Customer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"gender\": \"Female\",\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"No\",\n  \"Dependents\": \"No\",\n  \"tenure\": 1,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"No\",\n  \"InternetService\": \"Fiber optic\",\n  \"OnlineSecurity\": \"No\",\n  \"OnlineBackup\": \"No\",\n  \"DeviceProtection\": \"No\",\n  \"TechSupport\": \"No\",\n  \"StreamingTV\": \"No\",\n  \"StreamingMovies\": \"No\",\n  \"Contract\": \"Month-to-month\",\n  \"PaperlessBilling\": \"Yes\",\n  \"PaymentMethod\": \"Electronic check\",\n  \"MonthlyCharges\": 85.50,\n  \"TotalCharges\": 85.50\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/predict",
+					"host": ["{{baseUrl}}"],
+					"path": ["predict"]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200 OK', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Verify prediction is Churn with High Risk', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.prediction).to.eql('Churn');",
+							"    pm.expect(jsonData.risk_level).to.eql('High');",
+							"    pm.expect(jsonData.probability).to.be.at.least(0.70);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Predict - Loyal Low Risk Customer",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"gender\": \"Male\",\n  \"SeniorCitizen\": 0,\n  \"Partner\": \"Yes\",\n  \"Dependents\": \"Yes\",\n  \"tenure\": 65,\n  \"PhoneService\": \"Yes\",\n  \"MultipleLines\": \"Yes\",\n  \"InternetService\": \"DSL\",\n  \"OnlineSecurity\": \"Yes\",\n  \"OnlineBackup\": \"Yes\",\n  \"DeviceProtection\": \"Yes\",\n  \"TechSupport\": \"Yes\",\n  \"StreamingTV\": \"Yes\",\n  \"StreamingMovies\": \"Yes\",\n  \"Contract\": \"Two year\",\n  \"PaperlessBilling\": \"No\",\n  \"PaymentMethod\": \"Bank transfer (automatic)\",\n  \"MonthlyCharges\": 60.00,\n  \"TotalCharges\": 3900.00\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/predict",
+					"host": ["{{baseUrl}}"],
+					"path": ["predict"]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 200 OK', function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"pm.test('Verify prediction is No Churn with Low Risk', function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData.prediction).to.eql('No Churn');",
+							"    pm.expect(jsonData.risk_level).to.eql('Low');",
+							"    pm.expect(jsonData.probability).to.be.below(0.40);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		},
+		{
+			"name": "Predict - Validation Error Edge Case",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"gender\": \"Unknown\",\n  \"tenure\": -10\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/predict",
+					"host": ["{{baseUrl}}"],
+					"path": ["predict"]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status code is 422 Unprocessable Entity', function () {",
+							"    pm.response.to.have.status(422);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Telecom Churn Predictor",
+  "description": "AI Deployment Platform frontend for predicting Telecom Customer Churn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

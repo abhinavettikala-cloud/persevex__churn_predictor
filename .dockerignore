@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caching & Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Frontend Build Outputs (if any)
+node_modules/
+dist/
+bun.lock
+package-lock.json
+
+# Git & IDE Configs
+.git/
+.gitignore
+.dockerignore
+.vscode/
+.idea/
+.gemini/
+
+# Temporary / OS files
+.DS_Store
+Thumbs.db
+tmp/
+*.log

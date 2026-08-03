@@ -1,0 +1,42 @@
+# ==============================================================================
+# Render Blueprint (Infrastructure-as-Code) Configuration
+# Deploys both FastAPI backend service and Streamlit frontend dashboard on Render
+# ==============================================================================
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FastAPI Backend Microservice
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: telecom-churn-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+    healthCheckPath: /health
+
+  # ----------------------------------------------------------------------------
+  # 2. Streamlit Frontend Dashboard
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: telecom-churn-frontend
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: API_BASE_URL
+        fromService:
+          type: web
+          name: telecom-churn-api
+          property: host
