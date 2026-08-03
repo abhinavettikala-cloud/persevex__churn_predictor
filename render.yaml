@@ -1,21 +1,18 @@
 # ==============================================================================
-# Render Blueprint (Infrastructure-as-Code) Configuration
-# Deploys both FastAPI backend service and Streamlit frontend dashboard on Render
+# Render Blueprint (Infrastructure-as-Code) Configuration - Docker Deployment
+# Deploys both FastAPI backend service and Streamlit frontend dashboard using Docker
 # ==============================================================================
 services:
   # ----------------------------------------------------------------------------
-  # 1. FastAPI Backend Microservice
+  # 1. FastAPI Backend Microservice (Docker)
   # ----------------------------------------------------------------------------
   - type: web
     name: telecom-churn-api
-    env: python
+    env: docker
+    dockerfilePath: ./Dockerfile
     region: oregon
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
       - key: ENVIRONMENT
         value: production
       - key: LOG_LEVEL
@@ -23,18 +20,15 @@ services:
     healthCheckPath: /health
 
   # ----------------------------------------------------------------------------
-  # 2. Streamlit Frontend Dashboard
+  # 2. Streamlit Frontend Dashboard (Docker)
   # ----------------------------------------------------------------------------
   - type: web
     name: telecom-churn-frontend
-    env: python
+    env: docker
+    dockerfilePath: ./Dockerfile.frontend
     region: oregon
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: streamlit run streamlit_app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.0
       - key: API_BASE_URL
         fromService:
           type: web

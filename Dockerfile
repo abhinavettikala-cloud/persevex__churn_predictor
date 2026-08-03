@@ -46,6 +46,6 @@ EXPOSE 8000
 # ------------------------------------------------------------------------------
 # 6. Container Entrypoint & Default Execution Command
 # ------------------------------------------------------------------------------
-# CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]:
-# Launches FastAPI app using Uvicorn ASGI server binding to 0.0.0.0 on port 8000.
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+# CMD ["sh", "-c", "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"]:
+# Uses shell execution so Render's dynamic $PORT environment variable is resolved automatically.
+CMD sh -c "uvicorn app:app --host 0.0.0.0 --port ${PORT:-8000}"
