@@ -495,70 +495,66 @@ with tab1:
             st.rerun()
 
     # Custom Non-White HTML Table Component for Recent Customer Evaluations
-    table_html = f"""
-    <div style="
-        background: {'rgba(15, 23, 42, 0.95)' if is_dark else '#FFFFFF'};
-        border: 1px solid {'rgba(99, 102, 241, 0.25)' if is_dark else '#E2E8F0'};
-        border-radius: 16px;
-        overflow: hidden;
-        margin-top: 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    ">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-family: 'Plus Jakarta Sans', sans-serif;">
-            <thead>
-                <tr style="
-                    background: {'#1E1B4B' if is_dark else '#EEF2FF'};
-                    color: {'#A5B4FC' if is_dark else '#4338CA'};
-                    font-size: 0.85rem;
-                    text-transform: uppercase;
-                    letter-spacing: 0.08em;
-                    border-bottom: 2px solid {'rgba(99, 102, 241, 0.3)' if is_dark else '#C7D2FE'};
-                ">
-                    <th style="padding: 14px 18px;">CustomerID</th>
-                    <th style="padding: 14px 18px;">Contract</th>
-                    <th style="padding: 14px 18px;">Tenure</th>
-                    <th style="padding: 14px 18px;">Monthly Charges</th>
-                    <th style="padding: 14px 18px;">Probability</th>
-                    <th style="padding: 14px 18px;">Risk Tier</th>
-                    <th style="padding: 14px 18px;">Verdict</th>
-                    <th style="padding: 14px 18px;">Time</th>
-                </tr>
-            </thead>
-            <tbody>
-    """
+    rows_html = []
     for idx, row in eval_df.iterrows():
         risk_str = str(row.get("Risk", ""))
         verdict_str = str(row.get("Verdict", ""))
         
         if risk_str == "High":
-            risk_badge = f'<span style="background: rgba(239, 68, 68, 0.2); color: #FCA5A5; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.4);">High</span>'
+            risk_badge = '<span style="background: rgba(239, 68, 68, 0.2); color: #FCA5A5; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.4);">High</span>'
         elif risk_str == "Medium":
-            risk_badge = f'<span style="background: rgba(245, 158, 11, 0.2); color: #FDE047; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4);">Medium</span>'
+            risk_badge = '<span style="background: rgba(245, 158, 11, 0.2); color: #FDE047; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4);">Medium</span>'
         else:
-            risk_badge = f'<span style="background: rgba(16, 185, 129, 0.2); color: #6EE7B7; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">Low</span>'
+            risk_badge = '<span style="background: rgba(16, 185, 129, 0.2); color: #6EE7B7; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">Low</span>'
             
-        verdict_badge = f'<span style="color: {"#F87171" if verdict_str == "Churn" else "#34D399"}; font-weight: 700;">{verdict_str}</span>'
+        verdict_color = "#F87171" if verdict_str == "Churn" else "#34D399"
+        verdict_badge = f'<span style="color: {verdict_color}; font-weight: 700;">{verdict_str}</span>'
 
         bg_row = "rgba(15, 23, 42, 0.6)" if is_dark and idx % 2 == 0 else "rgba(30, 41, 59, 0.6)" if is_dark else "#FFFFFF" if idx % 2 == 0 else "#F8FAFC"
         border_bottom = "1px solid rgba(255, 255, 255, 0.06)" if is_dark else "1px solid #E2E8F0"
+        text_color = "#F8FAFC" if is_dark else "#0F172A"
+        time_color = "#94A3B8" if is_dark else "#64748B"
         
-        table_html += f"""
-        <tr style="background: {bg_row}; border-bottom: {border_bottom}; color: {'#F8FAFC' if is_dark else '#0F172A'}; font-size: 0.92rem;">
-            <td style="padding: 12px 18px; font-weight: 700;">{row.get("CustomerID", "")}</td>
-            <td style="padding: 12px 18px;">{row.get("Contract", "")}</td>
-            <td style="padding: 12px 18px;">{row.get("Tenure", "")} mos</td>
-            <td style="padding: 12px 18px; font-weight: 600;">{row.get("MonthlyCharges", "")}</td>
-            <td style="padding: 12px 18px; font-weight: 700; color: #818CF8;">{row.get("Probability", "")}</td>
-            <td style="padding: 12px 18px;">{risk_badge}</td>
-            <td style="padding: 12px 18px;">{verdict_badge}</td>
-            <td style="padding: 12px 18px; color: {'#94A3B8' if is_dark else '#64748B'}; font-size: 0.85rem;">{row.get("Time", "")}</td>
-        </tr>
-        """
-    table_html += """
-            </tbody>
-        </table>
-    </div>
-    """
+        rows_html.append(
+            f'<tr style="background: {bg_row}; border-bottom: {border_bottom}; color: {text_color}; font-size: 0.92rem;">'
+            f'<td style="padding: 12px 18px; font-weight: 700;">{row.get("CustomerID", "")}</td>'
+            f'<td style="padding: 12px 18px;">{row.get("Contract", "")}</td>'
+            f'<td style="padding: 12px 18px;">{row.get("Tenure", "")} mos</td>'
+            f'<td style="padding: 12px 18px; font-weight: 600;">{row.get("MonthlyCharges", "")}</td>'
+            f'<td style="padding: 12px 18px; font-weight: 700; color: #818CF8;">{row.get("Probability", "")}</td>'
+            f'<td style="padding: 12px 18px;">{risk_badge}</td>'
+            f'<td style="padding: 12px 18px;">{verdict_badge}</td>'
+            f'<td style="padding: 12px 18px; color: {time_color}; font-size: 0.85rem;">{row.get("Time", "")}</td>'
+            f'</tr>'
+        )
+
+    container_bg = 'rgba(15, 23, 42, 0.95)' if is_dark else '#FFFFFF'
+    container_border = 'rgba(99, 102, 241, 0.25)' if is_dark else '#E2E8F0'
+    header_bg = '#1E1B4B' if is_dark else '#EEF2FF'
+    header_color = '#A5B4FC' if is_dark else '#4338CA'
+    header_border = 'rgba(99, 102, 241, 0.3)' if is_dark else '#C7D2FE'
+
+    table_html = (
+        f'<div style="background: {container_bg}; border: 1px solid {container_border}; border-radius: 16px; overflow: hidden; margin-top: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);">'
+        f'<table style="width: 100%; border-collapse: collapse; text-align: left; font-family: \'Plus Jakarta Sans\', sans-serif;">'
+        f'<thead>'
+        f'<tr style="background: {header_bg}; color: {header_color}; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 2px solid {header_border};">'
+        f'<th style="padding: 14px 18px;">CustomerID</th>'
+        f'<th style="padding: 14px 18px;">Contract</th>'
+        f'<th style="padding: 14px 18px;">Tenure</th>'
+        f'<th style="padding: 14px 18px;">Monthly Charges</th>'
+        f'<th style="padding: 14px 18px;">Probability</th>'
+        f'<th style="padding: 14px 18px;">Risk Tier</th>'
+        f'<th style="padding: 14px 18px;">Verdict</th>'
+        f'<th style="padding: 14px 18px;">Time</th>'
+        f'</tr>'
+        f'</thead>'
+        f'<tbody>'
+        + "".join(rows_html) +
+        f'</tbody>'
+        f'</table>'
+        f'</div>'
+    )
     st.markdown(table_html, unsafe_allow_html=True)
 
 
