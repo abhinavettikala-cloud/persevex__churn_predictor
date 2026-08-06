@@ -12,7 +12,7 @@ services:
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8501
+      - CORS_ORIGINS=http://localhost:8501
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -41,23 +41,6 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-    networks:
-      - churn_network
-
-  # 3. React Vite SPA Frontend Application
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    container_name: telecom_churn_frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - VITE_API_BASE_URL=http://localhost:8000
-    depends_on:
-      api:
-        condition: service_healthy
-    restart: always
     networks:
       - churn_network
 
