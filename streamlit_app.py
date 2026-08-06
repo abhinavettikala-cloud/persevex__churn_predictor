@@ -3,6 +3,7 @@ import requests
 import json
 import time
 import os
+import random
 import pandas as pd
 import numpy as np
 from datetime import datetime, timezone
@@ -20,7 +21,51 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 2. Sidebar Diagnostics & Theme Mode Selector
+# 2. Persistent History Storage System (Fixes Cross-Tab & Refresh Sync)
+# -----------------------------------------------------------------------------
+HISTORY_FILE = "evaluations_history.json"
+
+def get_history():
+    """Load persistent customer evaluation history from disk."""
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and len(data) > 0:
+                    return data
+        except Exception:
+            pass
+    
+    # Default seed dataset if no file exists
+    default_history = [
+        {"CustomerID": "CUST-7590", "Contract": "Month-to-month", "Tenure": 1, "MonthlyCharges": "$29.85", "Probability": "74.2%", "Risk": "High", "Verdict": "Churn", "Time": "14:32:05"},
+        {"CustomerID": "CUST-5575", "Contract": "One year", "Tenure": 34, "MonthlyCharges": "$56.95", "Probability": "12.4%", "Risk": "Low", "Verdict": "No Churn", "Time": "14:28:10"},
+        {"CustomerID": "CUST-3668", "Contract": "Month-to-month", "Tenure": 2, "MonthlyCharges": "$53.85", "Probability": "58.6%", "Risk": "Medium", "Verdict": "Churn", "Time": "14:15:22"},
+        {"CustomerID": "CUST-7795", "Contract": "One year", "Tenure": 45, "MonthlyCharges": "$42.30", "Probability": "8.1%", "Risk": "Low", "Verdict": "No Churn", "Time": "13:54:01"},
+        {"CustomerID": "CUST-9237", "Contract": "Month-to-month", "Tenure": 2, "MonthlyCharges": "$70.70", "Probability": "81.9%", "Risk": "High", "Verdict": "Churn", "Time": "13:40:18"}
+    ]
+    save_history(default_history)
+    return default_history
+
+def save_history(history_list):
+    """Save customer evaluation history to disk."""
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            json.dump(history_list, f, indent=2)
+    except Exception:
+        pass
+
+def add_history_entry(entry):
+    """Prepend a new prediction evaluation entry and persist."""
+    history = get_history()
+    history.insert(0, entry)
+    save_history(history[:100])  # Retain last 100 predictions
+
+# Load current history snapshot
+eval_history = get_history()
+
+# -----------------------------------------------------------------------------
+# 3. Sidebar Diagnostics & Theme Mode Selector
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3059/3059502.png", width=55)
@@ -59,10 +104,10 @@ with st.sidebar:
         st.error("🔴 API Offline (`python app.py`)")
 
     st.markdown("---")
-    st.info("💡 **Tip**: Toggle between Dark Mode and Light Mode anytime using the sidebar selector.")
+    st.info("💡 **Live Sync Active**: Every prediction immediately updates the Executive Dashboard table.")
 
 # -----------------------------------------------------------------------------
-# 3. Dynamic Light / Dark CSS Styling Injection (With Strict Contrast Fixes)
+# 4. Dynamic Light / Dark CSS Styling Injection
 # -----------------------------------------------------------------------------
 if is_dark:
     bg_app = "#070B14"
@@ -107,7 +152,6 @@ st.markdown(f"""
         font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }}
 
-    /* Hero Banner */
     .hero-container {{
         background: {hero_bg};
         border: 2px solid {card_border};
@@ -129,7 +173,6 @@ st.markdown(f"""
         font-weight: 600;
     }}
 
-    /* Streamlit Tabs Text Contrast Fix */
     button[data-baseweb="tab"] {{
         color: {tab_unselected} !important;
         font-weight: 700 !important;
@@ -150,12 +193,10 @@ st.markdown(f"""
         background-color: {card_border} !important;
     }}
 
-    /* Headings & Markdown Text Fix */
     h1, h2, h3, h4, h5, h6, .stMarkdown p, .stMarkdown span, label {{
         color: {text_main} !important;
     }}
 
-    /* Glass Cards */
     .glass-card {{
         background: {card_bg};
         border: 1px solid {card_border};
@@ -165,7 +206,6 @@ st.markdown(f"""
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }}
 
-    /* KPI Container */
     .kpi-container {{
         background: {card_bg};
         border: 1px solid {card_border};
@@ -212,7 +252,6 @@ st.markdown(f"""
         border: 1px solid rgba(16, 185, 129, 0.3);
     }}
 
-    /* Verdict Card */
     .result-card-churn {{
         background: {"linear-gradient(135deg, rgba(127, 29, 29, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%)" if is_dark else "#FEF2F2"};
         border: 2px solid {"rgba(239, 68, 68, 0.4)" if is_dark else "#FCA5A5"};
@@ -230,7 +269,6 @@ st.markdown(f"""
         text-align: center;
     }}
 
-    /* Section Pills */
     .section-pill {{
         display: inline-flex;
         align-items: center;
@@ -246,7 +284,6 @@ st.markdown(f"""
         margin-bottom: 14px;
     }}
 
-    /* Buttons */
     .stButton>button {{
         background: linear-gradient(90deg, #2563EB 0%, #3B82F6 100%);
         color: #FFFFFF !important;
@@ -272,7 +309,7 @@ if os.path.exists("metadata.json"):
         pass
 
 # -----------------------------------------------------------------------------
-# 4. Hero Banner & Top Tabs Navigation
+# 5. Hero Banner & Top Tabs Navigation
 # -----------------------------------------------------------------------------
 st.markdown("""
 <div class="hero-container">
@@ -293,21 +330,26 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1: EXECUTIVE DASHBOARD
 # -----------------------------------------------------------------------------
 with tab1:
+    eval_df = pd.DataFrame(eval_history)
+    total_evals = len(eval_df)
+    churn_count = int(sum(eval_df["Verdict"] == "Churn")) if total_evals > 0 else 0
+    churn_rate = (churn_count / total_evals * 100) if total_evals > 0 else 0.0
+
     kcol1, kcol2, kcol3, kcol4 = st.columns(4)
     with kcol1:
         st.markdown(f"""
         <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
             <div class="kpi-title">Total Evaluated Customers</div>
-            <div class="kpi-value">7,043</div>
-            <div class="kpi-badge kpi-badge-cyan">↑ 12.5% Month over Month</div>
+            <div class="kpi-value">{total_evals:,}</div>
+            <div class="kpi-badge kpi-badge-cyan">Live Persistent Tracker</div>
         </div>
         """, unsafe_allow_html=True)
     with kcol2:
         st.markdown(f"""
         <div class="kpi-container" style="border-top: 4px solid #F43F5E;">
             <div class="kpi-title">Overall Churn Rate</div>
-            <div class="kpi-value" style="color: #F43F5E;">26.5%</div>
-            <div class="kpi-badge kpi-badge-emerald">↓ 2.4% Retention Gain</div>
+            <div class="kpi-value" style="color: #F43F5E;">{churn_rate:.1f}%</div>
+            <div class="kpi-badge kpi-badge-emerald">{churn_count} High Risk Alerts</div>
         </div>
         """, unsafe_allow_html=True)
     with kcol3:
@@ -365,11 +407,15 @@ with tab1:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.subheader("🎯 Risk Tier Breakdown")
         
+        low_cnt = int(sum(eval_df["Risk"] == "Low")) if total_evals > 0 else 0
+        med_cnt = int(sum(eval_df["Risk"] == "Medium")) if total_evals > 0 else 0
+        high_cnt = int(sum(eval_df["Risk"] == "High")) if total_evals > 0 else 0
+
         fig_pie = go.Figure(data=[go.Pie(
             labels=["Low Risk (<40%)", "Medium Risk (40-70%)", "High Risk (>70%)"],
-            values=[4150, 1840, 1053],
+            values=[max(low_cnt, 1), max(med_cnt, 1), max(high_cnt, 1)],
             hole=0.62,
-            textinfo="percent",
+            textinfo="percent+value",
             hoverinfo="label+value+percent",
             marker=dict(
                 colors=["#10B981", "#F59E0B", "#F43F5E"],
@@ -390,15 +436,18 @@ with tab1:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.subheader("📋 Recent Customer Evaluations")
-    recent_df = pd.DataFrame([
-        {"CustomerID": "7590-VHVEG", "Contract": "Month-to-month", "Tenure": 1, "MonthlyCharges": "$29.85", "Probability": "74.2%", "Risk": "High", "Verdict": "Churn"},
-        {"CustomerID": "5575-GNVDE", "Contract": "One year", "Tenure": 34, "MonthlyCharges": "$56.95", "Probability": "12.4%", "Risk": "Low", "Verdict": "No Churn"},
-        {"CustomerID": "3668-QVRWS", "Contract": "Month-to-month", "Tenure": 2, "MonthlyCharges": "$53.85", "Probability": "58.6%", "Risk": "Medium", "Verdict": "Churn"},
-        {"CustomerID": "7795-CFOCW", "Contract": "One year", "Tenure": 45, "MonthlyCharges": "$42.30", "Probability": "8.1%", "Risk": "Low", "Verdict": "No Churn"},
-        {"CustomerID": "9237-HQJCB", "Contract": "Month-to-month", "Tenure": 2, "MonthlyCharges": "$70.70", "Probability": "81.9%", "Risk": "High", "Verdict": "Churn"}
-    ])
-    st.dataframe(recent_df, use_container_width=True, hide_index=True)
+    # Table Action Header
+    tbl_col1, tbl_col2 = st.columns([3, 1])
+    with tbl_col1:
+        st.subheader("📋 Recent Customer Evaluations")
+        st.caption(f"Showing {total_evals} saved evaluation records (saved to `evaluations_history.json`):")
+    with tbl_col2:
+        if st.button("🗑️ Reset History Log", use_container_width=True):
+            if os.path.exists(HISTORY_FILE):
+                os.remove(HISTORY_FILE)
+            st.rerun()
+
+    st.dataframe(eval_df, use_container_width=True, hide_index=True)
 
 
 # -----------------------------------------------------------------------------
@@ -495,6 +544,7 @@ with tab2:
         st.markdown("<br>", unsafe_allow_html=True)
         submit_button = st.form_submit_button("🚀 Run FastAPI Model Prediction", type="primary", use_container_width=True)
 
+    # Process Form Submission
     if submit_button:
         payload = {
             "gender": gender,
@@ -533,71 +583,24 @@ with tab2:
                     conf = res["confidence_score"]
                     risk = res["risk_level"]
 
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    
-                    card_class = "result-card-churn" if pred == "Churn" else "result-card-retain"
-                    risk_color = "#EF4444" if risk == "High" else "#F59E0B" if risk == "Medium" else "#10B981"
+                    # Persistent record addition
+                    new_entry = {
+                        "CustomerID": f"CUST-{random.randint(1000, 9999)}",
+                        "Contract": contract,
+                        "Tenure": int(tenure),
+                        "MonthlyCharges": f"${monthly_charges:.2f}",
+                        "Probability": f"{(prob*100):.1f}%",
+                        "Risk": risk,
+                        "Verdict": pred,
+                        "Time": datetime.now().strftime("%H:%M:%S")
+                    }
+                    add_history_entry(new_entry)
 
-                    st.markdown(f"""
-                    <div class="{card_class}">
-                        <div style="font-size: 1.1rem; color: {text_sub}; margin-bottom: 6px;">Real-Time AI Prediction Verdict</div>
-                        <div style="font-size: 3.2rem; font-weight: 800; margin-bottom: 12px; color: {risk_color};">
-                            {'🔴 Customer Will Churn' if pred == 'Churn' else '🟢 Customer Will Retain'}
-                        </div>
-                        <div style="font-size: 1.2rem; font-weight: 700; color: {text_main};">
-                            {risk.upper()} RISK TIER ({(prob*100):.1f}% Probability)
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    st.markdown("<br>", unsafe_allow_html=True)
-
-                    res_c1, res_c2 = st.columns([1, 1])
-                    with res_c1:
-                        fig_gauge = go.Figure(go.Indicator(
-                            mode="gauge+number",
-                            value=prob * 100,
-                            domain={'x': [0, 1], 'y': [0, 1]},
-                            title={'text': "Churn Probability Gauge", 'font': {'size': 18, 'color': plotly_text, 'family': "Plus Jakarta Sans"}},
-                            number={'suffix': "%", 'font': {'size': 36, 'color': risk_color, 'family': "Plus Jakarta Sans"}},
-                            gauge={
-                                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': plotly_axis},
-                                'bar': {'color': risk_color},
-                                'bgcolor': "rgba(15, 23, 42, 0.8)" if is_dark else "#FFFFFF",
-                                'borderwidth': 2,
-                                'bordercolor': plotly_axis,
-                                'steps': [
-                                    {'range': [0, 40], 'color': "rgba(16, 185, 129, 0.2)"},
-                                    {'range': [40, 70], 'color': "rgba(245, 158, 11, 0.2)"},
-                                    {'range': [70, 100], 'color': "rgba(239, 68, 68, 0.2)"}
-                                ]
-                            }
-                        ))
-                        fig_gauge.update_layout(
-                            paper_bgcolor="rgba(0,0,0,0)",
-                            font=dict(color=plotly_text, family="Plus Jakarta Sans"),
-                            margin=dict(l=20, r=20, t=30, b=20),
-                            height=250
-                        )
-                        st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
-
-                    with res_c2:
-                        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-                        st.subheader("💡 Prescriptive Retention Actions")
-                        if pred == "Churn":
-                            st.error("""
-                            - **Action 1**: Assign dedicated Customer Retention Specialist immediately.
-                            - **Action 2**: Offer a 20% promotional discount on a 1-Year or 2-Year Contract extension.
-                            - **Action 3**: Provide complimentary 6-month Tech Support & Online Security add-on.
-                            """)
-                        else:
-                            st.success("""
-                            - **Action 1**: Maintain current engagement schedule.
-                            - **Action 2**: Target for premium service upgrades (e.g., Fiber optic / Streaming bundle).
-                            - **Action 3**: Schedule automated annual loyalty check-in.
-                            """)
-                        st.write(f"⏱️ **Inference Latency**: `{latency_ms:.1f} ms` | **Model Confidence**: `{conf*100:.1f}%`")
-                        st.markdown('</div>', unsafe_allow_html=True)
+                    # Store in session state for instant view on tab 2
+                    st.session_state.latest_result = {
+                        "pred": pred, "prob": prob, "conf": conf, "risk": risk, "latency_ms": latency_ms
+                    }
+                    st.rerun()
 
                 else:
                     st.error(f"❌ API Error ({resp.status_code}): {resp.text}")
@@ -606,6 +609,77 @@ with tab2:
                 st.error("❌ Connection Error: Ensure FastAPI server is running on `http://localhost:8000`.")
             except Exception as e:
                 st.error(f"❌ Error during prediction request: {str(e)}")
+
+    # Display Latest Prediction Result on Tab 2 if Available
+    if "latest_result" in st.session_state:
+        res = st.session_state.latest_result
+        pred, prob, conf, risk, latency_ms = res["pred"], res["prob"], res["conf"], res["risk"], res["latency_ms"]
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        card_class = "result-card-churn" if pred == "Churn" else "result-card-retain"
+        risk_color = "#EF4444" if risk == "High" else "#F59E0B" if risk == "Medium" else "#10B981"
+
+        st.markdown(f"""
+        <div class="{card_class}">
+            <div style="font-size: 1.1rem; color: {text_sub}; margin-bottom: 6px;">Real-Time AI Prediction Verdict</div>
+            <div style="font-size: 3.2rem; font-weight: 800; margin-bottom: 12px; color: {risk_color};">
+                {'🔴 Customer Will Churn' if pred == 'Churn' else '🟢 Customer Will Retain'}
+            </div>
+            <div style="font-size: 1.2rem; font-weight: 700; color: {text_main};">
+                {risk.upper()} RISK TIER ({(prob*100):.1f}% Probability)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        res_c1, res_c2 = st.columns([1, 1])
+        with res_c1:
+            fig_gauge = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=prob * 100,
+                domain={'x': [0, 1], 'y': [0, 1]},
+                title={'text': "Churn Probability Gauge", 'font': {'size': 18, 'color': plotly_text, 'family': "Plus Jakarta Sans"}},
+                number={'suffix': "%", 'font': {'size': 36, 'color': risk_color, 'family': "Plus Jakarta Sans"}},
+                gauge={
+                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': plotly_axis},
+                    'bar': {'color': risk_color},
+                    'bgcolor': "rgba(15, 23, 42, 0.8)" if is_dark else "#FFFFFF",
+                    'borderwidth': 2,
+                    'bordercolor': plotly_axis,
+                    'steps': [
+                        {'range': [0, 40], 'color': "rgba(16, 185, 129, 0.2)"},
+                        {'range': [40, 70], 'color': "rgba(245, 158, 11, 0.2)"},
+                        {'range': [70, 100], 'color': "rgba(239, 68, 68, 0.2)"}
+                    ]
+                }
+            ))
+            fig_gauge.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color=plotly_text, family="Plus Jakarta Sans"),
+                margin=dict(l=20, r=20, t=30, b=20),
+                height=250
+            )
+            st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
+
+        with res_c2:
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.subheader("💡 Prescriptive Retention Actions")
+            if pred == "Churn":
+                st.error("""
+                - **Action 1**: Assign dedicated Customer Retention Specialist immediately.
+                - **Action 2**: Offer a 20% promotional discount on a 1-Year or 2-Year Contract extension.
+                - **Action 3**: Provide complimentary 6-month Tech Support & Online Security add-on.
+                """)
+            else:
+                st.success("""
+                - **Action 1**: Maintain current engagement schedule.
+                - **Action 2**: Target for premium service upgrades (e.g., Fiber optic / Streaming bundle).
+                - **Action 3**: Schedule automated annual loyalty check-in.
+                """)
+            st.write(f"⏱️ **Inference Latency**: `{latency_ms:.1f} ms` | **Model Confidence**: `{conf*100:.1f}%`")
+            st.success("✅ **Saved to History**: Your prediction was automatically saved to **Recent Customer Evaluations** on the Executive Dashboard!")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 
 # -----------------------------------------------------------------------------
