@@ -1,35 +1,13 @@
-# ==============================================================================
-# Render Blueprint Configuration - Docker Containers Deployment
-# ==============================================================================
 services:
-  # ----------------------------------------------------------------------------
-  # 1. FastAPI Backend Microservice (Docker)
-  # ----------------------------------------------------------------------------
   - type: web
-    name: telecom-churn-api
-    env: docker
-    dockerfilePath: Dockerfile
+    name: telecom-churn-predictor
+    env: python
     region: oregon
     plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0"
     envVars:
-      - key: ENVIRONMENT
-        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
       - key: LOG_LEVEL
         value: INFO
-    healthCheckPath: /health
-
-  # ----------------------------------------------------------------------------
-  # 2. Streamlit Frontend Dashboard (Docker)
-  # ----------------------------------------------------------------------------
-  - type: web
-    name: telecom-churn-frontend
-    env: docker
-    dockerfilePath: Dockerfile.frontend
-    region: oregon
-    plan: free
-    envVars:
-      - key: API_BASE_URL
-        fromService:
-          type: web
-          name: telecom-churn-api
-          property: host

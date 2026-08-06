@@ -10,6 +10,14 @@ from datetime import datetime, timezone
 import plotly.express as px
 import plotly.graph_objects as go
 
+# Local Standalone ML Predictor Fallback
+try:
+    from src.api.inference import ChurnPredictor
+    from src.api.schemas import ChurnPredictionRequest
+    standalone_predictor = ChurnPredictor("model.pkl", "scaler.pkl", "encoder.pkl")
+except Exception:
+    standalone_predictor = None
+
 # -----------------------------------------------------------------------------
 # 1. Page Configuration
 # -----------------------------------------------------------------------------
@@ -85,23 +93,25 @@ with st.sidebar:
     st.markdown("---")
 
     # API Connection Diagnostics
-    st.subheader("📡 Backend API Diagnostics")
+    st.subheader("📡 Service Diagnostics")
     default_url = os.getenv("API_BASE_URL", "http://localhost:8000")
     api_base_url = st.text_input("FastAPI Server URL", value=default_url, help="URL of running FastAPI backend")
 
     health_url = f"{api_base_url.rstrip('/')}/health"
+    api_online = False
     try:
-        health_resp = requests.get(health_url, timeout=2)
-        if health_resp.status_code == 200:
-            health_data = health_resp.json()
-            if health_data.get("status") in ["healthy", "ok"]:
-                st.success("🟢 API Connected & Operational")
-            else:
-                st.warning("🟡 API Degraded")
-        else:
-            st.error(f"🔴 API Error ({health_resp.status_code})")
+        health_resp = requests.get(health_url, timeout=1.5)
+        if health_resp.status_code == 200 and health_resp.json().get("status") in ["healthy", "ok"]:
+            api_online = True
+            st.success("🟢 FastAPI Backend Connected")
     except Exception:
-        st.error("🔴 API Offline (`python app.py`)")
+        pass
+
+    if not api_online:
+        if standalone_predictor is not None and all(standalone_predictor.is_healthy()):
+            st.info("⚡ In-Memory Engine Active (Standalone Mode)")
+        else:
+            st.error("🔴 Service Offline (Missing Model Artifacts)")
 
     st.markdown("---")
     st.info("💡 **Live Sync Active**: Every prediction immediately updates the Executive Dashboard table.")
@@ -570,10 +580,11 @@ with tab2:
 
         predict_endpoint = f"{api_base_url.rstrip('/')}/predict"
 
-        with st.spinner("Evaluating feature vector in FastAPI pipeline..."):
+        with st.spinner("Evaluating feature vector in ML pipeline..."):
+            pred, prob, conf, risk, latency_ms = None, None, None, None, 0
             try:
                 start_t = time.time()
-                resp = requests.post(predict_endpoint, json=payload, timeout=10)
+                resp = requests.post(predict_endpoint, json=payload, timeout=2)
                 latency_ms = (time.time() - start_t) * 1000
 
                 if resp.status_code == 200:
@@ -582,33 +593,44 @@ with tab2:
                     prob = res["probability"]
                     conf = res["confidence_score"]
                     risk = res["risk_level"]
-
-                    # Persistent record addition
-                    new_entry = {
-                        "CustomerID": f"CUST-{random.randint(1000, 9999)}",
-                        "Contract": contract,
-                        "Tenure": int(tenure),
-                        "MonthlyCharges": f"${monthly_charges:.2f}",
-                        "Probability": f"{(prob*100):.1f}%",
-                        "Risk": risk,
-                        "Verdict": pred,
-                        "Time": datetime.now().strftime("%H:%M:%S")
-                    }
-                    add_history_entry(new_entry)
-
-                    # Store in session state for instant view on tab 2
-                    st.session_state.latest_result = {
-                        "pred": pred, "prob": prob, "conf": conf, "risk": risk, "latency_ms": latency_ms
-                    }
-                    st.rerun()
-
                 else:
-                    st.error(f"❌ API Error ({resp.status_code}): {resp.text}")
+                    raise Exception(f"API HTTP {resp.status_code}")
+            except Exception:
+                # Local standalone in-memory inference fallback
+                if standalone_predictor is not None and all(standalone_predictor.is_healthy()):
+                    try:
+                        start_t = time.time()
+                        req_obj = ChurnPredictionRequest(**payload)
+                        res_obj = standalone_predictor.predict(req_obj)
+                        latency_ms = (time.time() - start_t) * 1000
+                        pred = res_obj.prediction
+                        prob = res_obj.probability
+                        conf = res_obj.confidence_score
+                        risk = res_obj.risk_level
+                    except Exception as ex:
+                        st.error(f"❌ Local Inference Error: {str(ex)}")
+                else:
+                    st.error("❌ Prediction Service Unavailable: Ensure model.pkl, scaler.pkl, encoder.pkl exist.")
 
-            except requests.exceptions.ConnectionError:
-                st.error("❌ Connection Error: Ensure FastAPI server is running on `http://localhost:8000`.")
-            except Exception as e:
-                st.error(f"❌ Error during prediction request: {str(e)}")
+            if pred is not None:
+                # Persistent record addition
+                new_entry = {
+                    "CustomerID": f"CUST-{random.randint(1000, 9999)}",
+                    "Contract": contract,
+                    "Tenure": int(tenure),
+                    "MonthlyCharges": f"${monthly_charges:.2f}",
+                    "Probability": f"{(prob*100):.1f}%",
+                    "Risk": risk,
+                    "Verdict": pred,
+                    "Time": datetime.now().strftime("%H:%M:%S")
+                }
+                add_history_entry(new_entry)
+
+                # Store in session state for instant view on tab 2
+                st.session_state.latest_result = {
+                    "pred": pred, "prob": prob, "conf": conf, "risk": risk, "latency_ms": latency_ms
+                }
+                st.rerun()
 
     # Display Latest Prediction Result on Tab 2 if Available
     if "latest_result" in st.session_state:
