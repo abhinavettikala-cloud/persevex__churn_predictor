@@ -47,7 +47,7 @@ jobs:
           cache: 'npm'
 
       - name: Install Node Dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: TypeScript Type Check
         run: npm run lint
