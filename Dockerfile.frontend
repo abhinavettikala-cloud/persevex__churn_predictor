@@ -1,9 +1,9 @@
-# Stage 1: Build React Vite SPA
-FROM node:20-alpine AS build
+# Stage 1: Build React Vite SPA (node:20-slim for glibc compatibility with Tailwind v4 native binaries)
+FROM node:20-slim AS build
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN npm install --legacy-peer-deps
 
 COPY . .
