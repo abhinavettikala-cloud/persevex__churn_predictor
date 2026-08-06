@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  # FastAPI Microservice Backend
+  # 1. FastAPI Machine Learning Backend API
   api:
     build:
       context: .
@@ -11,24 +11,56 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - LOG_LEVEL=INFO
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8501
     restart: always
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
       retries: 3
+    networks:
+      - churn_network
 
-  # Streamlit Frontend Web Dashboard
-  frontend:
+  # 2. Streamlit Analytical Web Dashboard
+  streamlit:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: telecom_churn_frontend
-    command: ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+      dockerfile: Dockerfile.streamlit
+    container_name: telecom_churn_streamlit
     ports:
       - "8501:8501"
     environment:
       - API_BASE_URL=http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - churn_network
+
+  # 3. React Vite SPA Frontend Application
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: telecom_churn_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
+    networks:
+      - churn_network
+
+networks:
+  churn_network:
+    driver: bridge

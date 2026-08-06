@@ -10,9 +10,9 @@ Tasks Executed:
 5. Exploratory Data Analysis (EDA Summary Statistics & Target Distribution)
 6. Train/Test Split (Stratified 80/20 split)
 7. Categorical Encoding (OneHotEncoder) & Scaling (StandardScaler)
-8. Train Logistic Regression, Random Forest, and XGBoost models
-9. Evaluation & Comparison across Accuracy, Precision, Recall, F1 Score, and ROC-AUC
-10. Model Selection & Exporting model.pkl, scaler.pkl, encoder.pkl
+8. Train Logistic Regression, Random Forest, and XGBoost models with class balancing
+9. Evaluation & Comparison across Accuracy, Precision, Recall, F1 Score, ROC-AUC, and PR-AUC
+10. Model Selection & Exporting model.pkl, scaler.pkl, encoder.pkl, and metadata.json
 11. End-to-End Inference Test Verification
 """
 
@@ -75,7 +75,7 @@ def main():
 
     # 6. Train Models & Evaluate
     logger.info("\n--- Step 6: Model Training, Evaluation & Comparison ---")
-    trained_models, metrics_df, best_model, best_model_name = train_and_evaluate_models(
+    trained_models, metrics_df, best_model, best_model_name, best_metrics = train_and_evaluate_models(
         X_train_scaled, X_test_scaled, y_train, y_test, random_state=42
     )
 
@@ -87,9 +87,23 @@ def main():
 
     logger.info(f"Selected Best Model: '{best_model_name}'")
 
-    # 7. Save Pipeline Artifacts
-    logger.info("\n--- Step 7: Saving Model Artifacts ---")
-    save_artifacts(best_model=best_model, scaler=scaler, encoder=encoder, output_dir=".")
+    # 7. Save Pipeline Artifacts & Metadata
+    logger.info("\n--- Step 7: Saving Model Artifacts & Metadata ---")
+    dataset_summary = {
+        "total_samples": len(featured_df),
+        "train_samples": len(X_train_scaled),
+        "test_samples": len(X_test_scaled),
+        "churn_ratio": float((featured_df["Churn"] == "Yes").mean())
+    }
+    save_artifacts(
+        best_model=best_model,
+        scaler=scaler,
+        encoder=encoder,
+        output_dir=".",
+        best_model_name=best_model_name,
+        best_metrics=best_metrics,
+        dataset_summary=dataset_summary
+    )
 
     # 8. Verify Artifact Reload & Sample Inference
     logger.info("\n--- Step 8: End-to-End Artifact Verification & Sample Inference ---")
@@ -102,7 +116,7 @@ def main():
     sample_pred = loaded_model.predict(sample_input)[0]
     sample_prob = loaded_model.predict_proba(sample_input)[0][1] if hasattr(loaded_model, "predict_proba") else None
 
-    logger.info(f"Verification Successful!")
+    logger.info("Verification Successful!")
     logger.info(f"Sample Test Prediction: {'Churn' if sample_pred == 1 else 'No Churn'} (Class: {sample_pred})")
     if sample_prob is not None:
         logger.info(f"Sample Churn Probability: {sample_prob:.4f}")

@@ -1,26 +1,24 @@
-export interface CustomerData {
-  gender: string;
-  seniorCitizen: string;
-  partner: string;
-  dependents: string;
-  tenure: number;
-  phoneService: string;
-  internetService: string;
-  contract: string;
-  monthlyCharges: number;
-  totalCharges: number;
-  paymentMethod: string;
-}
+import * as React from "react"
 
-export interface PredictionResult {
-  prediction: "Churn" | "No Churn";
-  probability: number;
-  confidence_score: number;
-  timestamp: string;
-}
+export type PredictionStatus = 'Completed' | 'Failed' | 'Processing';
+export type RiskLevel = 'High' | 'Medium' | 'Low';
 
-export interface HistoryRecord {
+export interface PredictionRecord {
   id: string;
-  data: CustomerData;
-  result: PredictionResult;
+  date: string;
+  time: string;
+  customerName: string;
+  prediction: string;
+  confidence: number;
+  probability: number;
+  processingTime: string;
+  modelVersion: string;
+}
+
+export interface MetricData {
+  title: string;
+  value: string | number;
+  change: number;
+  trend: 'up' | 'down' | 'neutral';
+  icon: React.ElementType;
 }

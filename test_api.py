@@ -25,7 +25,7 @@ class TestFastAPIBackend(unittest.TestCase):
         response = client.get("/health")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(data["status"], "ok")
+        self.assertEqual(data["status"], "healthy")
         self.assertTrue(data["model_loaded"])
         self.assertTrue(data["scaler_loaded"])
         self.assertTrue(data["encoder_loaded"])

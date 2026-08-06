@@ -17,7 +17,7 @@ class TestStreamlitIntegration(unittest.TestCase):
             response = requests.get(f"{API_URL}/health", timeout=3)
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(data["status"], "ok")
+            self.assertIn(data["status"], ["healthy", "ok"])
         except requests.exceptions.ConnectionError:
             self.skipTest("FastAPI server not running locally on http://localhost:8000")
 

@@ -1,97 +1,16 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
-from datetime import datetime
+import math
+from typing import Literal
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class ChurnPredictionRequest(BaseModel):
     """
     Pydantic request schema for Telecom Customer Churn prediction input validation.
-    Enforces strict field types, value constraints, and provides Swagger documentation examples.
+    Enforces strict field requirements, forbidding unexpected extra fields, validating
+    non-finite float values, and ensuring exact schema contracts.
     """
-    gender: Literal["Female", "Male"] = Field(
-        default="Female",
-        description="Customer gender ('Female' or 'Male')"
-    )
-    SeniorCitizen: Literal[0, 1] = Field(
-        default=0,
-        description="Senior citizen status (1 for Yes, 0 for No)"
-    )
-    Partner: Literal["Yes", "No"] = Field(
-        default="Yes",
-        description="Whether customer has a partner ('Yes' or 'No')"
-    )
-    Dependents: Literal["Yes", "No"] = Field(
-        default="No",
-        description="Whether customer has dependents ('Yes' or 'No')"
-    )
-    tenure: int = Field(
-        default=12,
-        ge=0,
-        le=120,
-        description="Number of months customer has stayed with company (0 to 120)"
-    )
-    PhoneService: Literal["Yes", "No"] = Field(
-        default="Yes",
-        description="Whether customer has phone service ('Yes' or 'No')"
-    )
-    MultipleLines: Literal["No phone service", "No", "Yes"] = Field(
-        default="No",
-        description="Whether customer has multiple lines"
-    )
-    InternetService: Literal["DSL", "Fiber optic", "No"] = Field(
-        default="Fiber optic",
-        description="Customer internet service provider ('DSL', 'Fiber optic', or 'No')"
-    )
-    OnlineSecurity: Literal["No internet service", "No", "Yes"] = Field(
-        default="No",
-        description="Whether customer has online security add-on"
-    )
-    OnlineBackup: Literal["No internet service", "No", "Yes"] = Field(
-        default="Yes",
-        description="Whether customer has online backup add-on"
-    )
-    DeviceProtection: Literal["No internet service", "No", "Yes"] = Field(
-        default="No",
-        description="Whether customer has device protection add-on"
-    )
-    TechSupport: Literal["No internet service", "No", "Yes"] = Field(
-        default="No",
-        description="Whether customer has tech support add-on"
-    )
-    StreamingTV: Literal["No internet service", "No", "Yes"] = Field(
-        default="Yes",
-        description="Whether customer has streaming TV add-on"
-    )
-    StreamingMovies: Literal["No internet service", "No", "Yes"] = Field(
-        default="No",
-        description="Whether customer has streaming movies add-on"
-    )
-    Contract: Literal["Month-to-month", "One year", "Two year"] = Field(
-        default="Month-to-month",
-        description="Contract type ('Month-to-month', 'One year', 'Two year')"
-    )
-    PaperlessBilling: Literal["Yes", "No"] = Field(
-        default="Yes",
-        description="Whether customer has paperless billing ('Yes' or 'No')"
-    )
-    PaymentMethod: Literal[
-        "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
-    ] = Field(
-        default="Electronic check",
-        description="Payment method used by customer"
-    )
-    MonthlyCharges: float = Field(
-        default=70.35,
-        ge=0.0,
-        description="Monthly charge amount in USD"
-    )
-    TotalCharges: float = Field(
-        default=844.20,
-        ge=0.0,
-        description="Total charge accumulated in USD"
-    )
-
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
             "example": {
                 "gender": "Female",
                 "SeniorCitizen": 0,
@@ -114,7 +33,98 @@ class ChurnPredictionRequest(BaseModel):
                 "TotalCharges": 85.00
             }
         }
-    }
+    )
+
+    gender: Literal["Female", "Male"] = Field(
+        ...,
+        description="Customer gender ('Female' or 'Male')"
+    )
+    SeniorCitizen: Literal[0, 1] = Field(
+        ...,
+        description="Senior citizen status (1 for Yes, 0 for No)"
+    )
+    Partner: Literal["Yes", "No"] = Field(
+        ...,
+        description="Whether customer has a partner ('Yes' or 'No')"
+    )
+    Dependents: Literal["Yes", "No"] = Field(
+        ...,
+        description="Whether customer has dependents ('Yes' or 'No')"
+    )
+    tenure: int = Field(
+        ...,
+        ge=0,
+        le=120,
+        description="Number of months customer has stayed with company (0 to 120)"
+    )
+    PhoneService: Literal["Yes", "No"] = Field(
+        ...,
+        description="Whether customer has phone service ('Yes' or 'No')"
+    )
+    MultipleLines: Literal["No phone service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has multiple lines"
+    )
+    InternetService: Literal["DSL", "Fiber optic", "No"] = Field(
+        ...,
+        description="Customer internet service provider ('DSL', 'Fiber optic', or 'No')"
+    )
+    OnlineSecurity: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has online security add-on"
+    )
+    OnlineBackup: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has online backup add-on"
+    )
+    DeviceProtection: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has device protection add-on"
+    )
+    TechSupport: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has tech support add-on"
+    )
+    StreamingTV: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has streaming TV add-on"
+    )
+    StreamingMovies: Literal["No internet service", "No", "Yes"] = Field(
+        ...,
+        description="Whether customer has streaming movies add-on"
+    )
+    Contract: Literal["Month-to-month", "One year", "Two year"] = Field(
+        ...,
+        description="Contract type ('Month-to-month', 'One year', 'Two year')"
+    )
+    PaperlessBilling: Literal["Yes", "No"] = Field(
+        ...,
+        description="Whether customer has paperless billing ('Yes' or 'No')"
+    )
+    PaymentMethod: Literal[
+        "Electronic check", "Mailed check", "Bank transfer (automatic)", "Credit card (automatic)"
+    ] = Field(
+        ...,
+        description="Payment method used by customer"
+    )
+    MonthlyCharges: float = Field(
+        ...,
+        ge=0.0,
+        description="Monthly charge amount in USD"
+    )
+    TotalCharges: float = Field(
+        ...,
+        ge=0.0,
+        description="Total charge accumulated in USD"
+    )
+
+    @field_validator("MonthlyCharges", "TotalCharges")
+    @classmethod
+    def validate_finite_number(cls, value: float) -> float:
+        """Ensures floating-point numeric fields do not accept NaN or Infinity."""
+        if math.isnan(value) or math.isinf(value):
+            raise ValueError("Numeric charges must be finite numbers (cannot be NaN or Infinity)")
+        return value
 
 
 class ChurnPredictionResponse(BaseModel):
@@ -145,7 +155,7 @@ class HealthResponse(BaseModel):
     """
     Pydantic health check status schema.
     """
-    status: str = Field(default="ok", description="API health status ('ok')")
+    status: str = Field(default="healthy", description="API health status ('healthy')")
     model_loaded: bool = Field(description="Whether ML model artifact is loaded")
     scaler_loaded: bool = Field(description="Whether scaler artifact is loaded")
     encoder_loaded: bool = Field(description="Whether encoder artifact is loaded")
