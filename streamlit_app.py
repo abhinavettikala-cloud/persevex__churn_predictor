@@ -316,8 +316,19 @@ st.markdown(f"""
         box-shadow: 0 6px 22px rgba(99, 102, 241, 0.5);
     }}
 
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
+    /* Non-White Custom Table Styling */
+    div[data-testid="stDataFrame"], div[data-testid="stTable"] {
+        background-color: {"rgba(15, 23, 42, 0.95)" if is_dark else "#F1F5F9"} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 14px !important;
+        padding: 6px !important;
+    }
+    div[data-baseweb="table"], div[data-baseweb="data-table"] {
+        background-color: {"#0F172A" if is_dark else "#F1F5F9"} !important;
+    }
+
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
