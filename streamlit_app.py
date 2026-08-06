@@ -22,8 +22,8 @@ except Exception:
 # 1. Page Configuration
 # -----------------------------------------------------------------------------
 st.set_page_config(
-    page_title="Telecom Churn AI — Enterprise Analytics Platform",
-    page_icon="📡",
+    page_title="Persevex Churn AI — Enterprise Intelligence Platform",
+    page_icon="🔮",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -76,19 +76,26 @@ eval_history = get_history()
 # 3. Sidebar Diagnostics & Theme Mode Selector
 # -----------------------------------------------------------------------------
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3059/3059502.png", width=55)
-    st.title("Telecom Churn AI")
-    st.caption("Production Machine Learning Platform")
+    st.markdown("""
+    <div style="text-align: center; padding: 6px 0 16px 0;">
+        <div style="display: inline-block; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%); color: white; padding: 10px 22px; border-radius: 16px; font-weight: 900; font-size: 1.35rem; letter-spacing: 0.12em; box-shadow: 0 8px 25px rgba(99, 102, 241, 0.45);">
+            PERSEVEX
+        </div>
+        <div style="font-size: 0.72rem; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.18em; margin-top: 10px;">
+            AI Intelligence Suite
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
 
     # Theme Mode Selector
-    st.subheader("🎨 Theme Mode")
+    st.subheader("🎨 Visual Palette")
     theme_choice = st.radio(
-        "Select Visual Theme:",
-        options=["🌙 Dark Mode", "☀️ Light Mode"],
+        "Select Theme:",
+        options=["🌙 Persevex Midnight", "☀️ Persevex Pearl"],
         index=0
     )
-    is_dark = theme_choice == "🌙 Dark Mode"
+    is_dark = theme_choice == "🌙 Persevex Midnight"
 
     st.markdown("---")
 
@@ -120,35 +127,35 @@ with st.sidebar:
 # 4. Dynamic Light / Dark CSS Styling Injection
 # -----------------------------------------------------------------------------
 if is_dark:
-    bg_app = "#070B14"
+    bg_app = "#090D16"
     text_main = "#F8FAFC"
     text_sub = "#94A3B8"
     card_bg = "rgba(15, 23, 42, 0.85)"
-    card_border = "rgba(255, 255, 255, 0.1)"
-    hero_bg = "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)"
-    hero_title_color = "#38BDF8"
+    card_border = "rgba(99, 102, 241, 0.2)"
+    hero_bg = "linear-gradient(135deg, #0F172A 0%, #1E1B4B 50%, #0F172A 100%)"
+    hero_title_color = "#818CF8"
     tab_unselected = "#94A3B8"
-    tab_selected = "#38BDF8"
+    tab_selected = "#6366F1"
     tab_hover = "#F8FAFC"
     plotly_text = "#94A3B8"
-    plotly_grid = "rgba(255, 255, 255, 0.05)"
-    plotly_axis = "rgba(255, 255, 255, 0.15)"
+    plotly_grid = "rgba(99, 102, 241, 0.08)"
+    plotly_axis = "rgba(99, 102, 241, 0.25)"
     kpi_val_color = "#F8FAFC"
     pie_hole_color = "#F8FAFC"
 else:
-    bg_app = "#F1F5F9"
+    bg_app = "#F8FAFC"
     text_main = "#0F172A"
-    text_sub = "#334155"
+    text_sub = "#475569"
     card_bg = "#FFFFFF"
-    card_border = "#CBD5E1"
-    hero_bg = "linear-gradient(135deg, #E0F2FE 0%, #EFF6FF 100%)"
-    hero_title_color = "#0369A1"
-    tab_unselected = "#475569"
-    tab_selected = "#0284C7"
+    card_border = "#E2E8F0"
+    hero_bg = "linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 50%, #FDF2F8 100%)"
+    hero_title_color = "#4F46E5"
+    tab_unselected = "#64748B"
+    tab_selected = "#4F46E5"
     tab_hover = "#0F172A"
     plotly_text = "#334155"
-    plotly_grid = "rgba(0, 0, 0, 0.08)"
-    plotly_axis = "rgba(0, 0, 0, 0.2)"
+    plotly_grid = "rgba(0, 0, 0, 0.06)"
+    plotly_axis = "rgba(0, 0, 0, 0.15)"
     kpi_val_color = "#0F172A"
     pie_hole_color = "#0F172A"
 
@@ -283,9 +290,9 @@ st.markdown(f"""
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: {"rgba(56, 189, 248, 0.12)" if is_dark else "#E0F2FE"};
-        border: 1px solid {"rgba(56, 189, 248, 0.3)" if is_dark else "#7DD3FC"};
-        color: {"#38BDF8" if is_dark else "#0369A1"} !important;
+        background: {"rgba(99, 102, 241, 0.14)" if is_dark else "#EEF2FF"};
+        border: 1px solid {"rgba(99, 102, 241, 0.35)" if is_dark else "#C7D2FE"};
+        color: {"#818CF8" if is_dark else "#4338CA"} !important;
         padding: 6px 16px;
         border-radius: 20px;
         font-size: 0.88rem;
@@ -295,13 +302,18 @@ st.markdown(f"""
     }}
 
     .stButton>button {{
-        background: linear-gradient(90deg, #2563EB 0%, #3B82F6 100%);
+        background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
         color: #FFFFFF !important;
         border: none;
         border-radius: 12px;
         font-weight: 700;
         padding: 12px 24px;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+        box-shadow: 0 4px 18px rgba(99, 102, 241, 0.35);
+        transition: all 0.2s ease;
+    }}
+    .stButton>button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 6px 22px rgba(99, 102, 241, 0.5);
     }}
 
     #MainMenu {{visibility: hidden;}}
@@ -321,19 +333,33 @@ if os.path.exists("metadata.json"):
 # -----------------------------------------------------------------------------
 # 5. Hero Banner & Top Tabs Navigation
 # -----------------------------------------------------------------------------
-st.markdown("""
+st.markdown(f"""
 <div class="hero-container">
-    <div class="hero-title">📡 Telecom Customer Churn AI Platform</div>
-    <div class="hero-subtitle">Real-time ML customer attrition prediction, prescripted retention actions, and model governance.</div>
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%); color: white; padding: 5px 14px; border-radius: 10px; font-weight: 800; font-size: 0.88rem; letter-spacing: 0.08em; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);">
+                PERSEVEX™ AI
+            </div>
+            <span style="font-size: 0.82rem; font-weight: 700; color: {text_sub}; text-transform: uppercase; letter-spacing: 0.12em;">
+                Enterprise Customer Churn Telemetry v2.4.1
+            </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; background: {"rgba(16, 185, 129, 0.15)" if is_dark else "#ECFDF5"}; border: 1px solid {"rgba(16, 185, 129, 0.3)" if is_dark else "#A7F3D0"}; padding: 4px 14px; border-radius: 20px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10B981; box-shadow: 0 0 8px #10B981;"></span>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #10B981;">ENGINE ONLINE</span>
+        </div>
+    </div>
+    <div class="hero-title">Persevex Churn Intelligence Hub</div>
+    <div class="hero-subtitle">Next-generation autonomous customer attrition telemetry, predictive feature scoring, and prescription analytics.</div>
 </div>
 """, unsafe_allow_html=True)
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Executive Dashboard",
-    "🔮 Predict Customer Churn",
-    "📈 Analytics & Insights",
-    "🏆 Model Performance & Metadata",
-    "📡 System Health & Telemetry"
+    "📊 Executive Overview",
+    "🔮 Persevex Predictor",
+    "📈 Feature Telemetry",
+    "🛡️ Model Governance",
+    "ℹ️ About Persevex Engine"
 ])
 
 # -----------------------------------------------------------------------------
