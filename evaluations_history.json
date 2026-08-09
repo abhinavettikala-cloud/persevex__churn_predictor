@@ -1,5 +1,15 @@
 [
   {
+    "CustomerID": "CUST-3979",
+    "Contract": "Month-to-month",
+    "Tenure": 12,
+    "MonthlyCharges": "$70.35",
+    "Probability": "74.3%",
+    "Risk": "High",
+    "Verdict": "Churn",
+    "Time": "19:15:48"
+  },
+  {
     "CustomerID": "CUST-7557",
     "Contract": "Month-to-month",
     "Tenure": 12,

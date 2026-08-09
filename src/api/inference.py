@@ -14,6 +14,7 @@ class ChurnPredictor:
     def __init__(self, model_path: str = "model.pkl", scaler_path: str = "scaler.pkl", encoder_path: str = "encoder.pkl"):
         self.artifact_loader = ArtifactLoader(model_path, scaler_path, encoder_path)
         self.service = PredictionService(artifact_loader=self.artifact_loader)
+        self.model_version = "1.0.0"
 
     def is_healthy(self) -> Tuple[bool, bool, bool]:
         """Checks artifact loading health status."""
@@ -33,5 +34,6 @@ class ChurnPredictor:
             probability=result.probability,
             confidence_score=result.confidence_score,
             risk_level=result.risk_level,
+            model_version=self.model_version,
             timestamp=result.timestamp
         )

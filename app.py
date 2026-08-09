@@ -27,10 +27,13 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Configuration & Environment Settings
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip('/')
+ENABLE_FALLBACK = os.getenv("ENABLE_FALLBACK", "false").lower() in ["true", "1"]
+
 # -----------------------------------------------------------------------------
 # 2. Session State Initialization Safeguards & Theme System
 # -----------------------------------------------------------------------------
-# Safely initialize all required session_state keys before any access
 if "churn_predictor_theme" not in st.session_state:
     initial_theme = "light"
     try:
@@ -52,11 +55,27 @@ if "preset" not in st.session_state:
 if "latest_prediction" not in st.session_state:
     st.session_state["latest_prediction"] = None
 
-# Safely retrieve theme preference using .get() fallback
 current_theme = st.session_state.get("churn_predictor_theme", "light")
 
 # -----------------------------------------------------------------------------
-# 3. Sidebar Brand Header & Theme Toggle Control
+# 3. Real API Health Check & Status Pill System
+# -----------------------------------------------------------------------------
+def check_api_health(url: str):
+    """Performs real HTTP GET /health check against the FastAPI backend."""
+    try:
+        resp = requests.get(f"{url}/health", timeout=1.5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get("status") == "healthy":
+                return True, "API Connected", data
+        return False, "API Degraded", None
+    except Exception:
+        return False, "API Unavailable", None
+
+api_is_online, api_status_text, api_health_data = check_api_health(API_BASE_URL)
+
+# -----------------------------------------------------------------------------
+# 4. Sidebar Brand Header & Theme Toggle Control
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("""
@@ -69,6 +88,29 @@ with st.sidebar:
         </div>
     </div>
     """, unsafe_allow_html=True)
+    st.markdown("---")
+
+    # Real API Connectivity Status Indicator
+    st.subheader("📡 Connection Telemetry")
+    if api_is_online:
+        st.markdown("""
+        <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10B981; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">●</span> API Connected
+        </div>
+        """, unsafe_allow_html=True)
+    elif ENABLE_FALLBACK:
+        st.markdown("""
+        <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #F59E0B; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">●</span> Fallback Model Active
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #EF4444; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">●</span> API Unavailable
+        </div>
+        """, unsafe_allow_html=True)
+
     st.markdown("---")
 
     # Theme Selection Radio
@@ -94,7 +136,7 @@ with st.sidebar:
     st.markdown("---")
 
 # -----------------------------------------------------------------------------
-# 4. Centralized Design System & Color Palette
+# 5. Centralized Design System & Color Palette
 # -----------------------------------------------------------------------------
 if is_dark:
     bg_app = "#090D16"
@@ -165,7 +207,6 @@ else:
     pill_border = "#C7D2FE"
     pill_text = "#4338CA"
 
-# Dynamic CSS Micro-Animations & Responsive Glassmorphism Architecture
 st.markdown(f"""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
@@ -222,10 +263,6 @@ st.markdown(f"""
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
         backdrop-filter: blur(12px);
     }}
-    .glass-card:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
-    }}
 
     .kpi-container {{
         background: {card_bg};
@@ -235,32 +272,6 @@ st.markdown(f"""
         text-align: left;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
     }}
-    .kpi-container:hover {{
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-    }}
-    .kpi-title {{
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: {text_sub} !important;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-bottom: 6px;
-    }}
-    .kpi-value {{
-        font-size: 2.2rem;
-        font-weight: 800;
-        color: {text_main} !important;
-        line-height: 1.1;
-    }}
-    .kpi-badge {{
-        display: inline-block;
-        font-size: 0.75rem;
-        font-weight: 700;
-        padding: 4px 12px;
-        border-radius: 12px;
-        margin-top: 8px;
-    }}
 
     .result-card-churn {{
         background: {result_churn_bg};
@@ -269,7 +280,6 @@ st.markdown(f"""
         border-radius: 18px;
         padding: 28px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.15);
     }}
     .result-card-retain {{
         background: {result_retain_bg};
@@ -278,7 +288,6 @@ st.markdown(f"""
         border-radius: 18px;
         padding: 28px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.15);
     }}
 
     .section-pill {{
@@ -324,10 +333,6 @@ st.markdown(f"""
         padding: 12px 24px;
         box-shadow: 0 4px 18px rgba(79, 70, 229, 0.35);
     }}
-    .stButton>button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(79, 70, 229, 0.5);
-    }}
 
     button[data-baseweb="tab"] {{
         color: {text_sub} !important;
@@ -343,45 +348,35 @@ st.markdown(f"""
         font-weight: 800 !important;
     }}
 
-    div[data-testid="stDataFrame"], div[data-testid="stTable"] {{
-        background-color: {card_bg} !important;
-        border: 1px solid {card_border} !important;
-        border-radius: 16px !important;
-        padding: 6px !important;
-    }}
-
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
 </style>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 5. In-Memory ML Predictor Initialization & Safe Artifact Loading
+# 6. Fallback In-Memory ML Predictor (Only initialized if ENABLE_FALLBACK=True)
 # -----------------------------------------------------------------------------
 @st.cache_resource
 def load_ml_predictor():
-    """Attempts to initialize the standalone ML ChurnPredictor."""
+    if not ENABLE_FALLBACK:
+        return None, None
     try:
         from src.api.inference import ChurnPredictor
         predictor = ChurnPredictor("model.pkl", "scaler.pkl", "encoder.pkl")
         if all(predictor.is_healthy()):
             return predictor, None
-        else:
-            return None, "Model files found but could not be initialized correctly."
-    except FileNotFoundError as fnf_err:
-        return None, f"Model file not found. Please verify that model.pkl, scaler.pkl, and encoder.pkl exist in the project directory. Details: {str(fnf_err)}"
+        return None, "Fallback model files could not be initialized."
     except Exception as exc:
-        return None, f"Error loading machine learning model artifacts: {str(exc)}"
+        return None, f"Fallback model load notice: {str(exc)}"
 
-standalone_predictor, model_load_error = load_ml_predictor()
+standalone_predictor, fallback_load_error = load_ml_predictor()
 
 # -----------------------------------------------------------------------------
-# 6. Persistent & Session-Based Prediction History System
+# 7. Persistent & Session-Based Prediction History System
 # -----------------------------------------------------------------------------
 HISTORY_FILE = BASE_DIR / "evaluations_history.json"
 
 def get_history_data():
-    """Retrieve history from session_state or disk."""
     if "prediction_history" in st.session_state and isinstance(st.session_state.get("prediction_history"), list) and len(st.session_state["prediction_history"]) > 0:
         return st.session_state["prediction_history"]
 
@@ -409,7 +404,6 @@ def get_history_data():
     return history
 
 def save_history_data(history_list):
-    """Save history list to session state and disk."""
     st.session_state["prediction_history"] = history_list
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
@@ -418,28 +412,11 @@ def save_history_data(history_list):
         pass
 
 def add_history_record(record):
-    """Add a new prediction evaluation to history."""
     history = get_history_data()
     history.insert(0, record)
     save_history_data(history[:100])
 
 eval_history = get_history_data()
-
-# -----------------------------------------------------------------------------
-# 7. Sidebar Engine Diagnostics & Status
-# -----------------------------------------------------------------------------
-with st.sidebar:
-    st.subheader("📡 Engine Diagnostics")
-    if standalone_predictor is not None:
-        st.success("🟢 In-Memory ML Engine Online")
-    else:
-        st.error("🔴 Model Engine Offline")
-
-    if model_load_error:
-        st.warning("⚠️ Artifact Notice: Model files missing or failed to initialize.")
-
-    st.markdown("---")
-    st.caption("🚀 **Render Ready**: Optimized for Python Web Service deployment.")
 
 # -----------------------------------------------------------------------------
 # 8. Hero Header Banner
@@ -466,7 +443,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Top Navigation Tabs
+# Navigation Tabs
 tab_dash, tab_predict, tab_hist, tab_analytics, tab_perf, tab_about = st.tabs([
     "📊 Executive Overview",
     "🔮 Persevex Predictor",
@@ -480,207 +457,212 @@ tab_dash, tab_predict, tab_hist, tab_analytics, tab_perf, tab_about = st.tabs([
 # TAB 1: EXECUTIVE DASHBOARD
 # -----------------------------------------------------------------------------
 with tab_dash:
-    eval_df = pd.DataFrame(eval_history)
-    total_evals = len(eval_df)
-    churn_count = int(sum(eval_df["Verdict"] == "Churn")) if total_evals > 0 else 0
-    retain_count = total_evals - churn_count
-    churn_rate = (churn_count / total_evals * 100) if total_evals > 0 else 0.0
+    try:
+        eval_df = pd.DataFrame(eval_history)
+        total_evals = len(eval_df)
+        churn_count = int(sum(eval_df["Verdict"] == "Churn")) if total_evals > 0 else 0
+        retain_count = total_evals - churn_count
+        churn_rate = (churn_count / total_evals * 100) if total_evals > 0 else 0.0
 
-    prob_list = []
-    if total_evals > 0 and "Probability" in eval_df.columns:
-        for p_str in eval_df["Probability"]:
-            try:
-                prob_list.append(float(str(p_str).replace("%", "")))
-            except Exception:
-                pass
-    avg_prob = np.mean(prob_list) if prob_list else 0.0
-
-    k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown(f"""
-        <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
-            <div class="kpi-title">Total Evaluated Customers</div>
-            <div class="kpi-value" style="color: #38BDF8;">{total_evals:,}</div>
-            <div class="kpi-badge" style="background: rgba(56, 189, 248, 0.15); color: #0284C7;">Live Tracker</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k2:
-        st.markdown(f"""
-        <div class="kpi-container" style="border-top: 4px solid {danger_color};">
-            <div class="kpi-title">Predicted Churn Rate</div>
-            <div class="kpi-value" style="color: {danger_color};">{churn_rate:.1f}%</div>
-            <div class="kpi-badge" style="background: rgba(239, 68, 68, 0.15); color: {danger_color};">{churn_count} High Risk Alerts</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k3:
-        st.markdown(f"""
-        <div class="kpi-container" style="border-top: 4px solid {success_color};">
-            <div class="kpi-title">Retained Customer Count</div>
-            <div class="kpi-value" style="color: {success_color};">{retain_count:,}</div>
-            <div class="kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: {success_color};">Low Risk Tier</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with k4:
-        st.markdown(f"""
-        <div class="kpi-container" style="border-top: 4px solid #8B5CF6;">
-            <div class="kpi-title">Avg Churn Probability</div>
-            <div class="kpi-value" style="color: #8B5CF6;">{avg_prob:.1f}%</div>
-            <div class="kpi-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">Model Calibrated</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    d_col1, d_col2 = st.columns([2, 1])
-    with d_col1:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.subheader("📈 Prediction Activity Trend (Weekly)")
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        retained_trend = [240, 310, 290, 410, 380, 210, 260]
-        churned_trend = [75, 82, 64, 105, 89, 45, 52]
-
-        fig_trend = go.Figure()
-        fig_trend.add_trace(go.Scatter(
-            x=days, y=retained_trend, name="Retained Customers",
-            mode="lines+markers", line=dict(color="#38BDF8", width=3.5, shape="spline"),
-            fill="tozeroy", fillcolor="rgba(56, 189, 248, 0.12)"
-        ))
-        fig_trend.add_trace(go.Scatter(
-            x=days, y=churned_trend, name="Churn Alerts",
-            mode="lines+markers", line=dict(color=danger_color, width=3.5, shape="spline"),
-            fill="tozeroy", fillcolor="rgba(239, 68, 68, 0.12)"
-        ))
-        fig_trend.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
-            xaxis=dict(showgrid=False, linecolor=plotly_axis),
-            yaxis=dict(showgrid=True, gridcolor=plotly_grid, linecolor=plotly_axis),
-            margin=dict(l=10, r=10, t=10, b=10),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-        )
-        st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with d_col2:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.subheader("🎯 Risk Tier Breakdown")
-        low_cnt = int(sum(eval_df["Risk"] == "Low")) if total_evals > 0 else 0
-        med_cnt = int(sum(eval_df["Risk"] == "Medium")) if total_evals > 0 else 0
-        high_cnt = int(sum(eval_df["Risk"] == "High")) if total_evals > 0 else 0
-
-        fig_pie = go.Figure(data=[go.Pie(
-            labels=["Low Risk (<40%)", "Medium Risk (40-70%)", "High Risk (>70%)"],
-            values=[max(low_cnt, 1), max(med_cnt, 1), max(high_cnt, 1)],
-            hole=0.62,
-            textinfo="percent+value",
-            hoverinfo="label+value+percent",
-            marker=dict(
-                colors=[success_color, warning_color, danger_color],
-                line=dict(color=card_bg, width=3)
-            )
-        )])
-        fig_pie.update_layout(
-            annotations=[dict(text="Risk<br>Tiers", x=0.5, y=0.5, font_size=15, font_color=text_main, font_family="Plus Jakarta Sans", font_weight=700, showarrow=False)],
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Plus Jakarta Sans", color=plotly_text, size=11),
-            margin=dict(l=10, r=10, t=10, b=10),
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
-        )
-        st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # HTML Table Component for Recent Customer Evaluations
-    st.markdown("<br>", unsafe_allow_html=True)
-    tbl_col1, tbl_col2 = st.columns([3, 1])
-    with tbl_col1:
-        st.subheader("📋 Recent Customer Evaluations")
-        st.caption(f"Showing {total_evals} saved evaluation records (saved to `evaluations_history.json`):")
-    with tbl_col2:
-        if st.button("🗑️ Reset History Log", use_container_width=True):
-            if HISTORY_FILE.exists():
+        prob_list = []
+        if total_evals > 0 and "Probability" in eval_df.columns:
+            for p_str in eval_df["Probability"]:
                 try:
-                    os.remove(HISTORY_FILE)
+                    prob_list.append(float(str(p_str).replace("%", "")))
                 except Exception:
                     pass
-            st.session_state["prediction_history"] = []
-            st.rerun()
+        avg_prob = np.mean(prob_list) if prob_list else 0.0
 
-    rows_html = []
-    for idx, row in eval_df.iterrows():
-        risk_str = str(row.get("Risk", ""))
-        verdict_str = str(row.get("Verdict", ""))
+        k1, k2, k3, k4 = st.columns(4)
+        with k1:
+            st.markdown(f"""
+            <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
+                <div class="kpi-title">Total Evaluated Customers</div>
+                <div class="kpi-value" style="color: #38BDF8;">{total_evals:,}</div>
+                <div class="kpi-badge" style="background: rgba(56, 189, 248, 0.15); color: #0284C7;">Live Tracker</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k2:
+            st.markdown(f"""
+            <div class="kpi-container" style="border-top: 4px solid {danger_color};">
+                <div class="kpi-title">Predicted Churn Rate</div>
+                <div class="kpi-value" style="color: {danger_color};">{churn_rate:.1f}%</div>
+                <div class="kpi-badge" style="background: rgba(239, 68, 68, 0.15); color: {danger_color};">{churn_count} High Risk Alerts</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k3:
+            st.markdown(f"""
+            <div class="kpi-container" style="border-top: 4px solid {success_color};">
+                <div class="kpi-title">Retained Customer Count</div>
+                <div class="kpi-value" style="color: {success_color};">{retain_count:,}</div>
+                <div class="kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: {success_color};">Low Risk Tier</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with k4:
+            st.markdown(f"""
+            <div class="kpi-container" style="border-top: 4px solid #8B5CF6;">
+                <div class="kpi-title">Avg Churn Probability</div>
+                <div class="kpi-value" style="color: #8B5CF6;">{avg_prob:.1f}%</div>
+                <div class="kpi-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">Model Calibrated</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        if risk_str == "High":
-            risk_badge = f'<span style="background: rgba(239, 68, 68, 0.2); color: {danger_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.4);">High</span>'
-        elif risk_str == "Medium":
-            risk_badge = f'<span style="background: rgba(245, 158, 11, 0.2); color: {warning_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4);">Medium</span>'
-        else:
-            risk_badge = f'<span style="background: rgba(16, 185, 129, 0.2); color: {success_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">Low</span>'
+        st.markdown("<br>", unsafe_allow_html=True)
 
-        verdict_color = danger_color if verdict_str == "Churn" else success_color
-        verdict_badge = f'<span style="color: {verdict_color}; font-weight: 700;">{verdict_str}</span>'
+        d_col1, d_col2 = st.columns([2, 1])
+        with d_col1:
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.subheader("📈 Prediction Activity Trend (Weekly)")
+            days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            retained_trend = [240, 310, 290, 410, 380, 210, 260]
+            churned_trend = [75, 82, 64, 105, 89, 45, 52]
 
-        bg_row = table_row_even if idx % 2 == 0 else table_row_odd
+            fig_trend = go.Figure()
+            fig_trend.add_trace(go.Scatter(
+                x=days, y=retained_trend, name="Retained Customers",
+                mode="lines+markers", line=dict(color="#38BDF8", width=3.5, shape="spline"),
+                fill="tozeroy", fillcolor="rgba(56, 189, 248, 0.12)"
+            ))
+            fig_trend.add_trace(go.Scatter(
+                x=days, y=churned_trend, name="Churn Alerts",
+                mode="lines+markers", line=dict(color=danger_color, width=3.5, shape="spline"),
+                fill="tozeroy", fillcolor="rgba(239, 68, 68, 0.12)"
+            ))
+            fig_trend.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
+                xaxis=dict(showgrid=False, linecolor=plotly_axis),
+                yaxis=dict(showgrid=True, gridcolor=plotly_grid, linecolor=plotly_axis),
+                margin=dict(l=10, r=10, t=10, b=10),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig_trend, width='stretch', config={'displayModeBar': False})
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        rows_html.append(
-            f'<tr style="background: {bg_row}; border-bottom: 1px solid {table_border}; color: {text_main}; font-size: 0.92rem;">'
-            f'<td style="padding: 12px 18px; font-weight: 700;">{row.get("CustomerID", "")}</td>'
-            f'<td style="padding: 12px 18px;">{row.get("Contract", "")}</td>'
-            f'<td style="padding: 12px 18px;">{row.get("Tenure", "")} mos</td>'
-            f'<td style="padding: 12px 18px; font-weight: 600;">{row.get("MonthlyCharges", "")}</td>'
-            f'<td style="padding: 12px 18px; font-weight: 700; color: #818CF8;">{row.get("Probability", "")}</td>'
-            f'<td style="padding: 12px 18px;">{risk_badge}</td>'
-            f'<td style="padding: 12px 18px;">{verdict_badge}</td>'
-            f'<td style="padding: 12px 18px; color: {text_muted}; font-size: 0.85rem;">{row.get("Time", "")}</td>'
+        with d_col2:
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.subheader("🎯 Risk Tier Breakdown")
+            low_cnt = int(sum(eval_df["Risk"] == "Low")) if total_evals > 0 else 0
+            med_cnt = int(sum(eval_df["Risk"] == "Medium")) if total_evals > 0 else 0
+            high_cnt = int(sum(eval_df["Risk"] == "High")) if total_evals > 0 else 0
+
+            # Verified Plotly annotation dictionary without invalid properties
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=["Low Risk (<40%)", "Medium Risk (40-70%)", "High Risk (>70%)"],
+                values=[max(low_cnt, 1), max(med_cnt, 1), max(high_cnt, 1)],
+                hole=0.62,
+                textinfo="percent+value",
+                hoverinfo="label+value+percent",
+                marker=dict(
+                    colors=[success_color, warning_color, danger_color],
+                    line=dict(color=card_bg, width=3)
+                )
+            )])
+            fig_pie.update_layout(
+                annotations=[dict(
+                    text="Risk<br>Tiers", x=0.5, y=0.5,
+                    font=dict(size=15, color=text_main, family="Plus Jakarta Sans"),
+                    showarrow=False
+                )],
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Plus Jakarta Sans", color=plotly_text, size=11),
+                margin=dict(l=10, r=10, t=10, b=10),
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig_pie, width='stretch', config={'displayModeBar': False})
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # HTML Table Component for Recent Customer Evaluations
+        st.markdown("<br>", unsafe_allow_html=True)
+        tbl_col1, tbl_col2 = st.columns([3, 1])
+        with tbl_col1:
+            st.subheader("📋 Recent Customer Evaluations")
+            st.caption(f"Showing {total_evals} saved evaluation records (saved to `evaluations_history.json`):")
+        with tbl_col2:
+            if st.button("🗑️ Reset History Log", width='stretch'):
+                if HISTORY_FILE.exists():
+                    try:
+                        os.remove(HISTORY_FILE)
+                    except Exception:
+                        pass
+                st.session_state["prediction_history"] = []
+                st.rerun()
+
+        rows_html = []
+        for idx, row in eval_df.iterrows():
+            risk_str = str(row.get("Risk", ""))
+            verdict_str = str(row.get("Verdict", ""))
+
+            if risk_str == "High":
+                risk_badge = f'<span style="background: rgba(239, 68, 68, 0.2); color: {danger_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.4);">High</span>'
+            elif risk_str == "Medium":
+                risk_badge = f'<span style="background: rgba(245, 158, 11, 0.2); color: {warning_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(245, 158, 11, 0.4);">Medium</span>'
+            else:
+                risk_badge = f'<span style="background: rgba(16, 185, 129, 0.2); color: {success_color}; padding: 4px 12px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.4);">Low</span>'
+
+            verdict_color = danger_color if verdict_str == "Churn" else success_color
+            verdict_badge = f'<span style="color: {verdict_color}; font-weight: 700;">{verdict_str}</span>'
+
+            bg_row = table_row_even if idx % 2 == 0 else table_row_odd
+
+            rows_html.append(
+                f'<tr style="background: {bg_row}; border-bottom: 1px solid {table_border}; color: {text_main}; font-size: 0.92rem;">'
+                f'<td style="padding: 12px 18px; font-weight: 700;">{row.get("CustomerID", "")}</td>'
+                f'<td style="padding: 12px 18px;">{row.get("Contract", "")}</td>'
+                f'<td style="padding: 12px 18px;">{row.get("Tenure", "")} mos</td>'
+                f'<td style="padding: 12px 18px; font-weight: 600;">{row.get("MonthlyCharges", "")}</td>'
+                f'<td style="padding: 12px 18px; font-weight: 700; color: #818CF8;">{row.get("Probability", "")}</td>'
+                f'<td style="padding: 12px 18px;">{risk_badge}</td>'
+                f'<td style="padding: 12px 18px;">{verdict_badge}</td>'
+                f'<td style="padding: 12px 18px; color: {text_muted}; font-size: 0.85rem;">{row.get("Time", "")}</td>'
+                f'</tr>'
+            )
+
+        table_html = (
+            f'<div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 16px; overflow: hidden; margin-top: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);">'
+            f'<table style="width: 100%; border-collapse: collapse; text-align: left; font-family: \'Plus Jakarta Sans\', sans-serif;">'
+            f'<thead>'
+            f'<tr style="background: {table_header_bg}; color: {table_header_text}; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 2px solid {table_header_border};">'
+            f'<th style="padding: 14px 18px;">CustomerID</th>'
+            f'<th style="padding: 14px 18px;">Contract</th>'
+            f'<th style="padding: 14px 18px;">Tenure</th>'
+            f'<th style="padding: 14px 18px;">Monthly Charges</th>'
+            f'<th style="padding: 14px 18px;">Probability</th>'
+            f'<th style="padding: 14px 18px;">Risk Tier</th>'
+            f'<th style="padding: 14px 18px;">Verdict</th>'
+            f'<th style="padding: 14px 18px;">Time</th>'
             f'</tr>'
+            f'</thead>'
+            f'<tbody>'
+            + "".join(rows_html) +
+            f'</tbody>'
+            f'</table>'
+            f'</div>'
         )
-
-    table_html = (
-        f'<div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 16px; overflow: hidden; margin-top: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);">'
-        f'<table style="width: 100%; border-collapse: collapse; text-align: left; font-family: \'Plus Jakarta Sans\', sans-serif;">'
-        f'<thead>'
-        f'<tr style="background: {table_header_bg}; color: {table_header_text}; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 2px solid {table_header_border};">'
-        f'<th style="padding: 14px 18px;">CustomerID</th>'
-        f'<th style="padding: 14px 18px;">Contract</th>'
-        f'<th style="padding: 14px 18px;">Tenure</th>'
-        f'<th style="padding: 14px 18px;">Monthly Charges</th>'
-        f'<th style="padding: 14px 18px;">Probability</th>'
-        f'<th style="padding: 14px 18px;">Risk Tier</th>'
-        f'<th style="padding: 14px 18px;">Verdict</th>'
-        f'<th style="padding: 14px 18px;">Time</th>'
-        f'</tr>'
-        f'</thead>'
-        f'<tbody>'
-        + "".join(rows_html) +
-        f'</tbody>'
-        f'</table>'
-        f'</div>'
-    )
-    st.markdown(table_html, unsafe_allow_html=True)
+        st.markdown(table_html, unsafe_allow_html=True)
+    except Exception:
+        st.error("Unable to load overview telemetry right now. Please try again.")
 
 # -----------------------------------------------------------------------------
 # TAB 2: PERSEVEX PREDICTOR
 # -----------------------------------------------------------------------------
 with tab_predict:
-    if model_load_error:
-        st.error(f"⚠️ **Model Availability Error**: {model_load_error}")
-
     st.subheader("⚡ Customer Profile Presets")
     st.caption("Click a preset button to instantly populate all 19 customer features:")
 
     pcol1, pcol2, pcol3 = st.columns(3)
 
     with pcol1:
-        if st.button("🔥 High Risk Churner Profile", use_container_width=True):
+        if st.button("🔥 High Risk Churner Profile", width='stretch'):
             st.session_state["preset"] = "high_risk"
     with pcol2:
-        if st.button("🛡️ Loyal Customer Profile", use_container_width=True):
+        if st.button("🛡️ Loyal Customer Profile", width='stretch'):
             st.session_state["preset"] = "loyal"
     with pcol3:
-        if st.button("⚙️ Reset to Default", use_container_width=True):
+        if st.button("⚙️ Reset to Default", width='stretch'):
             st.session_state["preset"] = "default"
 
     current_preset = st.session_state.get("preset", "default")
@@ -756,7 +738,7 @@ with tab_predict:
             total_charges = st.number_input("Total Charges ($)", min_value=0.0, max_value=10000.0, value=float(p_total), step=10.0)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        submit_button = st.form_submit_button("🚀 Run Model Churn Prediction", type="primary", use_container_width=True)
+        submit_button = st.form_submit_button("🚀 Run Model Churn Prediction", type="primary", width='stretch')
 
     if submit_button:
         payload = {
@@ -784,7 +766,23 @@ with tab_predict:
         with st.spinner("Evaluating customer feature vector in ML pipeline..."):
             pred, prob, conf, risk, latency_ms = None, None, None, None, 0.0
 
-            if standalone_predictor is not None:
+            # 1. Primary Path: Deployed REST API Service
+            api_endpoint = f"{API_BASE_URL}/predict"
+            try:
+                start_t = time.time()
+                resp = requests.post(api_endpoint, json=payload, timeout=3.0)
+                if resp.status_code == 200:
+                    res = resp.json()
+                    pred = res["prediction"]
+                    prob = res["probability"]
+                    conf = res["confidence_score"]
+                    risk = res["risk_level"]
+                    latency_ms = (time.time() - start_t) * 1000
+            except Exception:
+                pass
+
+            # 2. Configurable Fallback Path (Only if ENABLE_FALLBACK=True)
+            if pred is None and ENABLE_FALLBACK and standalone_predictor is not None:
                 try:
                     from src.api.schemas import ChurnPredictionRequest
                     start_t = time.time()
@@ -795,21 +793,6 @@ with tab_predict:
                     prob = res_obj.probability
                     conf = res_obj.confidence_score
                     risk = res_obj.risk_level
-                except Exception as ex:
-                    st.error(f"Inference error: {str(ex)}")
-
-            if pred is None:
-                api_url = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip('/') + "/predict"
-                try:
-                    start_t = time.time()
-                    resp = requests.post(api_url, json=payload, timeout=2.0)
-                    if resp.status_code == 200:
-                        res = resp.json()
-                        pred = res["prediction"]
-                        prob = res["probability"]
-                        conf = res["confidence_score"]
-                        risk = res["risk_level"]
-                        latency_ms = (time.time() - start_t) * 1000
                 except Exception:
                     pass
 
@@ -831,78 +814,81 @@ with tab_predict:
                 }
                 st.rerun()
             else:
-                st.error("Model file not found or prediction failed. Please verify that model.pkl, scaler.pkl, and encoder.pkl exist in the model directory.")
+                st.error("Prediction service is temporarily unavailable. Please try again later.")
 
     latest_pred_data = st.session_state.get("latest_prediction")
     if latest_pred_data:
-        res = latest_pred_data
-        pred, prob, conf, risk, latency_ms = res["pred"], res["prob"], res["conf"], res["risk"], res["latency_ms"]
+        try:
+            res = latest_pred_data
+            pred, prob, conf, risk, latency_ms = res["pred"], res["prob"], res["conf"], res["risk"], res["latency_ms"]
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        card_class = "result-card-churn" if pred == "Churn" else "result-card-retain"
-        risk_color = danger_color if risk == "High" else warning_color if risk == "Medium" else success_color
+            st.markdown("<br>", unsafe_allow_html=True)
+            card_class = "result-card-churn" if pred == "Churn" else "result-card-retain"
+            risk_color = danger_color if risk == "High" else warning_color if risk == "Medium" else success_color
 
-        st.markdown(f"""
-        <div class="{card_class}">
-            <div style="font-size: 1.05rem; color: {text_sub}; margin-bottom: 4px;">Real-Time AI Prediction Verdict</div>
-            <div style="font-size: 3.2rem; font-weight: 800; margin-bottom: 10px; color: {risk_color};">
-                {'🔴 Customer Will Churn' if pred == 'Churn' else '🟢 Customer Will Retain'}
+            st.markdown(f"""
+            <div class="{card_class}">
+                <div style="font-size: 1.05rem; color: {text_sub}; margin-bottom: 4px;">Real-Time AI Prediction Verdict</div>
+                <div style="font-size: 3.2rem; font-weight: 800; margin-bottom: 10px; color: {risk_color};">
+                    {'🔴 Customer Will Churn' if pred == 'Churn' else '🟢 Customer Will Retain'}
+                </div>
+                <div style="font-size: 1.2rem; font-weight: 700; color: {text_main};">
+                    {risk.upper()} RISK TIER ({(prob*100):.1f}% Probability)
+                </div>
             </div>
-            <div style="font-size: 1.2rem; font-weight: 700; color: {text_main};">
-                {risk.upper()} RISK TIER ({(prob*100):.1f}% Probability)
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-        res_c1, res_c2 = st.columns([1, 1])
-        with res_c1:
-            fig_gauge = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=prob * 100,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "Churn Probability Gauge", 'font': {'size': 18, 'color': plotly_text, 'family': "Plus Jakarta Sans"}},
-                number={'suffix': "%", 'font': {'size': 36, 'color': risk_color, 'family': "Plus Jakarta Sans"}},
-                gauge={
-                    'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': plotly_axis},
-                    'bar': {'color': risk_color},
-                    'bgcolor': card_bg,
-                    'borderwidth': 2,
-                    'bordercolor': plotly_axis,
-                    'steps': [
-                        {'range': [0, 40], 'color': "rgba(16, 185, 129, 0.18)"},
-                        {'range': [40, 70], 'color': "rgba(245, 158, 11, 0.18)"},
-                        {'range': [70, 100], 'color': "rgba(239, 68, 68, 0.18)"}
-                    ]
-                }
-            ))
-            fig_gauge.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color=plotly_text, family="Plus Jakarta Sans"),
-                margin=dict(l=20, r=20, t=30, b=20),
-                height=250
-            )
-            st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
+            res_c1, res_c2 = st.columns([1, 1])
+            with res_c1:
+                fig_gauge = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=prob * 100,
+                    domain={'x': [0, 1], 'y': [0, 1]},
+                    title={'text': "Churn Probability Gauge", 'font': {'size': 18, 'color': plotly_text, 'family': "Plus Jakarta Sans"}},
+                    number={'suffix': "%", 'font': {'size': 36, 'color': risk_color, 'family': "Plus Jakarta Sans"}},
+                    gauge={
+                        'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': plotly_axis},
+                        'bar': {'color': risk_color},
+                        'bgcolor': card_bg,
+                        'borderwidth': 2,
+                        'bordercolor': plotly_axis,
+                        'steps': [
+                            {'range': [0, 40], 'color': "rgba(16, 185, 129, 0.18)"},
+                            {'range': [40, 70], 'color': "rgba(245, 158, 11, 0.18)"},
+                            {'range': [70, 100], 'color': "rgba(239, 68, 68, 0.18)"}
+                        ]
+                    }
+                ))
+                fig_gauge.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color=plotly_text, family="Plus Jakarta Sans"),
+                    margin=dict(l=20, r=20, t=30, b=20),
+                    height=250
+                )
+                st.plotly_chart(fig_gauge, width='stretch', config={'displayModeBar': False})
 
-        with res_c2:
-            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.subheader("💡 Prescriptive Retention Actions")
-            if pred == "Churn":
-                st.error("""
-                - **Action 1**: Assign dedicated Customer Retention Specialist immediately.
-                - **Action 2**: Offer a 20% promotional discount on a 1-Year or 2-Year Contract extension.
-                - **Action 3**: Provide complimentary 6-month Tech Support & Online Security add-on.
-                """)
-            else:
-                st.success("""
-                - **Action 1**: Maintain current engagement schedule.
-                - **Action 2**: Target for premium service upgrades (e.g., Fiber optic / Streaming bundle).
-                - **Action 3**: Schedule automated annual loyalty check-in.
-                """)
-            st.write(f"⏱️ **Inference Latency**: `{latency_ms:.1f} ms` | **Model Confidence**: `{conf*100:.1f}%`")
-            st.success("✅ **Saved to History**: Your prediction was automatically saved to **Recent Customer Evaluations** on the Executive Dashboard!")
-            st.markdown('</div>', unsafe_allow_html=True)
+            with res_c2:
+                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+                st.subheader("💡 Prescriptive Retention Actions")
+                if pred == "Churn":
+                    st.error("""
+                    - **Action 1**: Assign dedicated Customer Retention Specialist immediately.
+                    - **Action 2**: Offer a 20% promotional discount on a 1-Year or 2-Year Contract extension.
+                    - **Action 3**: Provide complimentary 6-month Tech Support & Online Security add-on.
+                    """)
+                else:
+                    st.success("""
+                    - **Action 1**: Maintain current engagement schedule.
+                    - **Action 2**: Target for premium service upgrades (e.g., Fiber optic / Streaming bundle).
+                    - **Action 3**: Schedule automated annual loyalty check-in.
+                    """)
+                st.write(f"⏱️ **Inference Latency**: `{latency_ms:.1f} ms` | **Model Confidence**: `{conf*100:.1f}%`")
+                st.success("✅ **Saved to History**: Your prediction was automatically saved to **Recent Customer Evaluations** on the Executive Dashboard!")
+                st.markdown('</div>', unsafe_allow_html=True)
+        except Exception:
+            st.error("Unable to render prediction result cards. Please try submitting again.")
 
 # -----------------------------------------------------------------------------
 # TAB 3: PREDICTION HISTORY
@@ -913,7 +899,7 @@ with tab_hist:
     with h_col1:
         st.caption(f"Displaying {len(eval_history)} customer evaluation records:")
     with h_col2:
-        if st.button("🗑️ Clear History", use_container_width=True):
+        if st.button("🗑️ Clear History", width='stretch'):
             if HISTORY_FILE.exists():
                 try:
                     os.remove(HISTORY_FILE)
@@ -923,22 +909,25 @@ with tab_hist:
             st.rerun()
 
     if eval_history:
-        history_df = pd.DataFrame(eval_history)
-        st.dataframe(
-            history_df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "CustomerID": "Customer ID",
-                "Contract": "Contract Type",
-                "Tenure": st.column_config.NumberColumn("Tenure (Mos)", format="%d"),
-                "MonthlyCharges": "Monthly Charges",
-                "Probability": "Churn Probability",
-                "Risk": "Risk Level",
-                "Verdict": "Verdict",
-                "Time": "Timestamp"
-            }
-        )
+        try:
+            history_df = pd.DataFrame(eval_history)
+            st.dataframe(
+                history_df,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "CustomerID": "Customer ID",
+                    "Contract": "Contract Type",
+                    "Tenure": st.column_config.NumberColumn("Tenure (Mos)", format="%d"),
+                    "MonthlyCharges": "Monthly Charges",
+                    "Probability": "Churn Probability",
+                    "Risk": "Risk Level",
+                    "Verdict": "Verdict",
+                    "Time": "Timestamp"
+                }
+            )
+        except Exception:
+            st.error("Unable to load history table right now. Please try again.")
     else:
         st.info("No prediction history recorded yet.")
 
@@ -948,82 +937,85 @@ with tab_hist:
 with tab_analytics:
     st.subheader("📊 Customer Demographics & Churn Factor Analytics")
 
-    a1, a2 = st.columns(2)
-    with a1:
-        st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.subheader("📄 Contract Type Breakdown")
-        fig_contract = go.Figure(data=[go.Pie(
-            labels=["Month-to-month", "Two year", "One year"],
-            values=[3875, 1695, 1473],
-            hole=0.55,
-            textinfo="percent+label",
-            hoverinfo="label+value+percent",
-            marker=dict(
-                colors=["#38BDF8", success_color, warning_color],
-                line=dict(color=card_bg, width=3)
+    try:
+        a1, a2 = st.columns(2)
+        with a1:
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.subheader("📄 Contract Type Breakdown")
+            fig_contract = go.Figure(data=[go.Pie(
+                labels=["Month-to-month", "Two year", "One year"],
+                values=[3875, 1695, 1473],
+                hole=0.55,
+                textinfo="percent+label",
+                hoverinfo="label+value+percent",
+                marker=dict(
+                    colors=["#38BDF8", success_color, warning_color],
+                    line=dict(color=card_bg, width=3)
+                )
+            )])
+            fig_contract.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
+                margin=dict(l=10, r=10, t=10, b=10),
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
             )
-        )])
-        fig_contract.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
-            margin=dict(l=10, r=10, t=10, b=10),
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
-        )
-        st.plotly_chart(fig_contract, use_container_width=True, config={'displayModeBar': False})
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.plotly_chart(fig_contract, width='stretch', config={'displayModeBar': False})
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    with a2:
+        with a2:
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.subheader("💳 Payment Method Distribution")
+            fig_pay = go.Figure(data=[go.Bar(
+                x=["Electronic check", "Mailed check", "Bank transfer", "Credit card"],
+                y=[2365, 1612, 1544, 1522],
+                text=["2,365", "1,612", "1,544", "1,522"],
+                textposition="outside",
+                marker=dict(
+                    color=["#38BDF8", "#6366F1", "#8B5CF6", "#EC4899"],
+                    line=dict(color=plotly_axis, width=1)
+                )
+            )])
+            fig_pay.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
+                xaxis=dict(showgrid=False, linecolor=plotly_axis),
+                yaxis=dict(showgrid=True, gridcolor=plotly_grid, linecolor=plotly_axis, title="Count"),
+                margin=dict(l=10, r=10, t=30, b=10)
+            )
+            st.plotly_chart(fig_pay, width='stretch', config={'displayModeBar': False})
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-        st.subheader("💳 Payment Method Distribution")
-        fig_pay = go.Figure(data=[go.Bar(
-            x=["Electronic check", "Mailed check", "Bank transfer", "Credit card"],
-            y=[2365, 1612, 1544, 1522],
-            text=["2,365", "1,612", "1,544", "1,522"],
+        st.subheader("🔍 Feature Importance & Target Correlation with Churn")
+        fig_corr = go.Figure(data=[go.Bar(
+            y=["Long Term Contract", "Tenure", "Total Charges", "Tech Support / Security", "Senior Citizen", "Monthly Charges"],
+            x=[-0.4051, -0.3522, -0.1983, -0.1827, 0.1508, 0.1934],
+            orientation="h",
+            text=["-40.5%", "-35.2%", "-19.8%", "-18.3%", "+15.1%", "+19.3%"],
             textposition="outside",
             marker=dict(
-                color=["#38BDF8", "#6366F1", "#8B5CF6", "#EC4899"],
+                color=[-0.4051, -0.3522, -0.1983, -0.1827, 0.1508, 0.1934],
+                colorscale=[[0, success_color], [0.5, "#38BDF8"], [1, danger_color]],
                 line=dict(color=plotly_axis, width=1)
             )
         )])
-        fig_pay.update_layout(
+        fig_corr.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
             font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
-            xaxis=dict(showgrid=False, linecolor=plotly_axis),
-            yaxis=dict(showgrid=True, gridcolor=plotly_grid, linecolor=plotly_axis, title="Count"),
-            margin=dict(l=10, r=10, t=30, b=10)
+            xaxis=dict(showgrid=True, gridcolor=plotly_grid, title="Correlation Coefficient with Churn Target"),
+            yaxis=dict(showgrid=False),
+            margin=dict(l=10, r=20, t=10, b=10)
         )
-        st.plotly_chart(fig_pay, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_corr, width='stretch', config={'displayModeBar': False})
         st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    st.subheader("🔍 Feature Importance & Target Correlation with Churn")
-    fig_corr = go.Figure(data=[go.Bar(
-        y=["Long Term Contract", "Tenure", "Total Charges", "Tech Support / Security", "Senior Citizen", "Monthly Charges"],
-        x=[-0.4051, -0.3522, -0.1983, -0.1827, 0.1508, 0.1934],
-        orientation="h",
-        text=["-40.5%", "-35.2%", "-19.8%", "-18.3%", "+15.1%", "+19.3%"],
-        textposition="outside",
-        marker=dict(
-            color=[-0.4051, -0.3522, -0.1983, -0.1827, 0.1508, 0.1934],
-            colorscale=[[0, success_color], [0.5, "#38BDF8"], [1, danger_color]],
-            line=dict(color=plotly_axis, width=1)
-        )
-    )])
-    fig_corr.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Plus Jakarta Sans", color=plotly_text, size=12),
-        xaxis=dict(showgrid=True, gridcolor=plotly_grid, title="Correlation Coefficient with Churn Target"),
-        yaxis=dict(showgrid=False),
-        margin=dict(l=10, r=20, t=10, b=10)
-    )
-    st.plotly_chart(fig_corr, use_container_width=True, config={'displayModeBar': False})
-    st.markdown('</div>', unsafe_allow_html=True)
+    except Exception:
+        st.error("Analytics are temporarily unavailable right now. Please try again.")
 
 # -----------------------------------------------------------------------------
 # TAB 5: MODEL PERFORMANCE & METRICS
@@ -1031,128 +1023,131 @@ with tab_analytics:
 with tab_perf:
     st.subheader("🏆 Model Performance & Provenance Manifest")
 
-    metadata_path = BASE_DIR / "metadata.json"
-    metrics_data = None
-    if metadata_path.exists():
-        try:
-            with open(metadata_path, "r", encoding="utf-8") as f:
-                meta_json = json.load(f)
-                metrics_data = meta_json.get("metrics")
-        except Exception:
-            pass
+    try:
+        metadata_path = BASE_DIR / "metadata.json"
+        metrics_data = None
+        if metadata_path.exists():
+            try:
+                with open(metadata_path, "r", encoding="utf-8") as f:
+                    meta_json = json.load(f)
+                    metrics_data = meta_json.get("metrics")
+            except Exception:
+                pass
 
-    if metrics_data:
-        acc = metrics_data.get("accuracy")
-        prec = metrics_data.get("precision")
-        rec = metrics_data.get("recall")
-        f1 = metrics_data.get("f1_score")
-        roc_auc = metrics_data.get("roc_auc")
-        pr_auc = metrics_data.get("pr_auc", 0.6577)
+        if metrics_data:
+            acc = metrics_data.get("accuracy")
+            prec = metrics_data.get("precision")
+            rec = metrics_data.get("recall")
+            f1 = metrics_data.get("f1_score")
+            roc_auc = metrics_data.get("roc_auc")
+            pr_auc = metrics_data.get("pr_auc", 0.6577)
 
-        m1, m2, m3, m4, m5, m6 = st.columns(6)
-        with m1:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
-                <div class="kpi-title">Accuracy</div>
-                <div class="kpi-value" style="color: #38BDF8;">{(acc*100):.1f}%</div>
-                <div class="kpi-badge" style="background: rgba(56, 189, 248, 0.15); color: #0284C7;">Overall Fit</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m2:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid #6366F1;">
-                <div class="kpi-title">Precision</div>
-                <div class="kpi-value" style="color: #6366F1;">{(prec*100):.1f}%</div>
-                <div class="kpi-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366F1;">Positive Predictive</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m3:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid #8B5CF6;">
-                <div class="kpi-title">Recall</div>
-                <div class="kpi-value" style="color: #8B5CF6;">{(rec*100):.1f}%</div>
-                <div class="kpi-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">Sensitivity Rate</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m4:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid #EC4899;">
-                <div class="kpi-title">F1 Score</div>
-                <div class="kpi-value" style="color: #EC4899;">{f1:.4f}</div>
-                <div class="kpi-badge" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">Harmonic Mean</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m5:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid {success_color};">
-                <div class="kpi-title">ROC-AUC</div>
-                <div class="kpi-value" style="color: {success_color};">{roc_auc:.4f}</div>
-                <div class="kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: {success_color};">Discriminative Power</div>
-            </div>
-            """, unsafe_allow_html=True)
-        with m6:
-            st.markdown(f"""
-            <div class="kpi-container" style="border-top: 4px solid #F59E0B;">
-                <div class="kpi-title">PR-AUC</div>
-                <div class="kpi-value" style="color: #F59E0B;">{pr_auc:.4f}</div>
-                <div class="kpi-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">Precision-Recall</div>
-            </div>
-            """, unsafe_allow_html=True)
+            m1, m2, m3, m4, m5, m6 = st.columns(6)
+            with m1:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
+                    <div class="kpi-title">Accuracy</div>
+                    <div class="kpi-value" style="color: #38BDF8;">{(acc*100):.1f}%</div>
+                    <div class="kpi-badge" style="background: rgba(56, 189, 248, 0.15); color: #0284C7;">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with m2:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid #6366F1;">
+                    <div class="kpi-title">Precision</div>
+                    <div class="kpi-value" style="color: #6366F1;">{(prec*100):.1f}%</div>
+                    <div class="kpi-badge" style="background: rgba(99, 102, 241, 0.15); color: #6366F1;">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with m3:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid #8B5CF6;">
+                    <div class="kpi-title">Recall</div>
+                    <div class="kpi-value" style="color: #8B5CF6;">{(rec*100):.1f}%</div>
+                    <div class="kpi-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with m4:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid #EC4899;">
+                    <div class="kpi-title">F1 Score</div>
+                    <div class="kpi-value" style="color: #EC4899;">{f1:.4f}</div>
+                    <div class="kpi-badge" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with m5:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid {success_color};">
+                    <div class="kpi-title">ROC-AUC</div>
+                    <div class="kpi-value" style="color: {success_color};">{roc_auc:.4f}</div>
+                    <div class="kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: {success_color};">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with m6:
+                st.markdown(f"""
+                <div class="kpi-container" style="border-top: 4px solid #F59E0B;">
+                    <div class="kpi-title">PR-AUC</div>
+                    <div class="kpi-value" style="color: #F59E0B;">{pr_auc:.4f}</div>
+                    <div class="kpi-badge" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">Test Performance</div>
+                </div>
+                """, unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
 
-        pm1, pm2 = st.columns(2)
-        with pm1:
-            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.subheader("🔥 Confusion Matrix Heatmap")
-            cm = metrics_data.get("confusion_matrix", [[939, 96], [181, 193]])
-            fig_cm = go.Figure(data=go.Heatmap(
-                z=cm,
-                x=["Predicted No Churn", "Predicted Churn"],
-                y=["Actual No Churn", "Actual Churn"],
-                colorscale=[[0, card_bg], [0.5, "#38BDF8"], [1, "#1D4ED8"]],
-                text=[[f"{cm[0][0]}<br>(True Negative)", f"{cm[0][1]}<br>(False Positive)"],
-                      [f"{cm[1][0]}<br>(False Negative)", f"{cm[1][1]}<br>(True Positive)"]],
-                texttemplate="%{text}",
-                textfont={"size": 14, "color": text_main, "family": "Plus Jakarta Sans"}
-            ))
-            fig_cm.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Plus Jakarta Sans", color=plotly_text),
-                margin=dict(l=10, r=10, t=10, b=10)
-            )
-            st.plotly_chart(fig_cm, use_container_width=True, config={'displayModeBar': False})
-            st.markdown('</div>', unsafe_allow_html=True)
+            pm1, pm2 = st.columns(2)
+            with pm1:
+                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+                st.subheader("🔥 Confusion Matrix Heatmap")
+                cm = metrics_data.get("confusion_matrix", [[939, 96], [181, 193]])
+                fig_cm = go.Figure(data=go.Heatmap(
+                    z=cm,
+                    x=["Predicted No Churn", "Predicted Churn"],
+                    y=["Actual No Churn", "Actual Churn"],
+                    colorscale=[[0, card_bg], [0.5, "#38BDF8"], [1, "#1D4ED8"]],
+                    text=[[f"{cm[0][0]}<br>(True Negative)", f"{cm[0][1]}<br>(False Positive)"],
+                          [f"{cm[1][0]}<br>(False Negative)", f"{cm[1][1]}<br>(True Positive)"]],
+                    texttemplate="%{text}",
+                    textfont={"size": 14, "color": text_main, "family": "Plus Jakarta Sans"}
+                ))
+                fig_cm.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Plus Jakarta Sans", color=plotly_text),
+                    margin=dict(l=10, r=10, t=10, b=10)
+                )
+                st.plotly_chart(fig_cm, width='stretch', config={'displayModeBar': False})
+                st.markdown('</div>', unsafe_allow_html=True)
 
-        with pm2:
-            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.subheader("📉 ROC Characteristic Curve")
-            fpr = [0.0, 0.05, 0.12, 0.22, 0.35, 0.50, 0.70, 0.88, 1.0]
-            tpr = [0.0, 0.38, 0.62, 0.78, 0.86, 0.92, 0.96, 0.99, 1.0]
-            fig_roc = go.Figure()
-            fig_roc.add_trace(go.Scatter(
-                x=fpr, y=tpr, name=f"Calibrated Model (AUC = {roc_auc:.4f})",
-                mode="lines", line=dict(color="#38BDF8", width=3.5, shape="spline"),
-                fill="tozeroy", fillcolor="rgba(56, 189, 248, 0.12)"
-            ))
-            fig_roc.add_trace(go.Scatter(
-                x=[0, 1], y=[0, 1], name="Random Classifier Baseline",
-                mode="lines", line=dict(color=text_muted, width=2, dash="dash")
-            ))
-            fig_roc.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Plus Jakarta Sans", color=plotly_text),
-                xaxis=dict(showgrid=True, gridcolor=plotly_grid, title="False Positive Rate"),
-                yaxis=dict(showgrid=True, gridcolor=plotly_grid, title="True Positive Rate"),
-                margin=dict(l=10, r=10, t=10, b=10),
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-            )
-            st.plotly_chart(fig_roc, use_container_width=True, config={'displayModeBar': False})
-            st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.info("Model performance metrics are not available.")
+            with pm2:
+                st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+                st.subheader("📉 ROC Characteristic Curve")
+                fpr = [0.0, 0.05, 0.12, 0.22, 0.35, 0.50, 0.70, 0.88, 1.0]
+                tpr = [0.0, 0.38, 0.62, 0.78, 0.86, 0.92, 0.96, 0.99, 1.0]
+                fig_roc = go.Figure()
+                fig_roc.add_trace(go.Scatter(
+                    x=fpr, y=tpr, name=f"Calibrated Model (AUC = {roc_auc:.4f})",
+                    mode="lines", line=dict(color="#38BDF8", width=3.5, shape="spline"),
+                    fill="tozeroy", fillcolor="rgba(56, 189, 248, 0.12)"
+                ))
+                fig_roc.add_trace(go.Scatter(
+                    x=[0, 1], y=[0, 1], name="Random Classifier Baseline",
+                    mode="lines", line=dict(color=text_muted, width=2, dash="dash")
+                ))
+                fig_roc.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Plus Jakarta Sans", color=plotly_text),
+                    xaxis=dict(showgrid=True, gridcolor=plotly_grid, title="False Positive Rate"),
+                    yaxis=dict(showgrid=True, gridcolor=plotly_grid, title="True Positive Rate"),
+                    margin=dict(l=10, r=10, t=10, b=10),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_roc, width='stretch', config={'displayModeBar': False})
+                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.info("Model performance metrics are not available.")
+    except Exception:
+        st.error("Unable to render model performance metrics right now. Please try again.")
 
 # -----------------------------------------------------------------------------
 # TAB 6: ABOUT
@@ -1164,10 +1159,11 @@ with tab_about:
         <h4>Overview</h4>
         <p>This Streamlit application delivers production-grade customer churn prediction and risk analytics for telecommunications providers.</p>
         <ul>
+            <li><b>API Endpoint</b>: <code>{API_BASE_URL}</code></li>
             <li><b>Visual Theme System</b>: Dynamic dual Light/Dark mode with session persistence.</li>
             <li><b>Model Framework</b>: Scikit-learn Calibrated Logistic Regression with balanced class weighting.</li>
             <li><b>Preprocessing</b>: Standard scaling for continuous numerical features & One-Hot Encoding for categorical features.</li>
-            <li><b>Deployment Target</b>: Render Web Service (Python Native Environment).</li>
+            <li><b>Deployment Architecture</b>: Separate Docker containers for FastAPI backend (<code>Dockerfile.api</code>) and Streamlit UI (<code>Dockerfile.ui</code>).</li>
             <li><b>Binding Address & Port</b>: Listens on <code>0.0.0.0</code> and port specified by <code>$PORT</code>.</li>
         </ul>
     </div>

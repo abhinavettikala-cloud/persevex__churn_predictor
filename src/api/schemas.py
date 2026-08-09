@@ -1,5 +1,5 @@
 import math
-from typing import Literal
+from typing import Literal, Optional
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 class ChurnPredictionRequest(BaseModel):
@@ -146,6 +146,10 @@ class ChurnPredictionResponse(BaseModel):
     risk_level: Literal["Low", "Medium", "High"] = Field(
         description="Churn risk tier based on probability threshold ('Low', 'Medium', 'High')"
     )
+    model_version: str = Field(
+        default="1.0.0",
+        description="Model semantic version"
+    )
     timestamp: str = Field(
         description="ISO 8601 formatted prediction timestamp"
     )
@@ -156,7 +160,9 @@ class HealthResponse(BaseModel):
     Pydantic health check status schema.
     """
     status: str = Field(default="healthy", description="API health status ('healthy')")
+    service: str = Field(default="telecom-churn-predictor-api", description="Service identifier")
     model_loaded: bool = Field(description="Whether ML model artifact is loaded")
     scaler_loaded: bool = Field(description="Whether scaler artifact is loaded")
     encoder_loaded: bool = Field(description="Whether encoder artifact is loaded")
+    model_version: str = Field(default="1.0.0", description="Model semantic version")
     timestamp: str = Field(description="ISO 8601 server timestamp")

@@ -1,79 +1,229 @@
-# 📡 Telecom Customer Churn AI Predictor
+# Persevex — Telecom Customer Churn Predictor & Telemetry Engine
 
-[![Python Version](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.32-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Render Deployable](https://img.shields.io/badge/Render-Deployable-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com)
-
-An enterprise-grade, full-stack Machine Learning application predicting telecom customer churn probabilities using trained XGBoost/Scikit-Learn models, complete with real-time interactive Plotly dashboards, dynamic light/dark UI themes, persistent customer evaluation history, and dual deployment modes (FastAPI + React or Standalone Streamlit Web Service).
+Production-grade enterprise platform for real-time customer attrition telemetry, machine learning prediction, and prescriptive retention analytics.
 
 ---
 
-## 🚀 Quick Start (Local Streamlit Web Service)
+## 🏗️ Deployment & System Architecture
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Run Streamlit Application**:
-   ```bash
-   streamlit run streamlit_app.py
-   ```
-   Open `http://localhost:8501` in your browser.
-
-3. **Run Automated Test Suite (28/28 System Tests)**:
-   ```bash
-   python run_all_tests.py
-   ```
-
----
-
-## 🌐 Deploy to Render (Web Service)
-
-### Option 1: Native Python Runtime (Recommended)
-
-1. Connect your GitHub repository to [Render.com](https://render.com).
-2. Create a new **Web Service**.
-3. Configure the following deployment settings:
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `streamlit run streamlit_app.py --server.port=$PORT --server.address=0.0.0.0`
-4. Deploy! Streamlit will automatically launch with `$PORT` binding.
-
-### Option 2: 1-Click Blueprint Deploy
-
-1. In Render, select **Blueprints** ➔ **New Blueprint Instance**.
-2. Select your repository. Render will automatically detect `render.yaml` and provision the web service.
-
----
-
-## 🏗️ Architecture & Project Structure
-
-```
-telecom-churn-predictor/
-├── app.py                     # FastAPI REST API Backend
-├── streamlit_app.py           # Unified Streamlit Web Service Application
-├── render.yaml                # Render Blueprint Deployment Spec
-├── evaluations_history.json   # Persistent evaluation log storage
-├── model.pkl                  # Trained Machine Learning Model
-├── scaler.pkl                 # StandardScaler Artifact
-├── encoder.pkl                # OneHotEncoder Artifact
-├── .streamlit/
-│   └── config.toml            # Streamlit Render Server Configuration
-├── src/
-│   ├── api/                   # Inference Engine & Schemas
-│   ├── pipeline/              # Cleaning, Feature Engineering & Serializer
-│   └── services/              # Artifact Loader & Prediction Service
-├── tests/                     # Unit, Endpoint & Integration Tests
-└── requirements.txt           # Python Dependencies
+```text
+                  ┌─────────────────────────────────┐
+                  │          End User               │
+                  └────────────────┬────────────────┘
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │    Streamlit UI Frontend        │
+                  │        (Port 8501)              │
+                  └────────────────┬────────────────┘
+                                   │ HTTP POST /predict
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │     FastAPI REST API Backend    │
+                  │        (Port 8000)              │
+                  └────────────────┬────────────────┘
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │   Data Preprocessing Pipeline   │
+                  │   (Scaler.pkl + Encoder.pkl)    │
+                  └────────────────┬────────────────┘
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │  Calibrated Logistic Regression │
+                  │          (Model.pkl)            │
+                  └────────────────┬────────────────┘
+                                   │
+                                   ▼
+                  ┌─────────────────────────────────┐
+                  │   Structured JSON Telemetry     │
+                  │   (Probability & Risk Level)    │
+                  └─────────────────────────────────┘
 ```
 
+The application is deployed as **two independent microservices**:
+1. **FastAPI REST API Backend (`Dockerfile.api`)**: Port `8000` (runs `uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT`).
+2. **Streamlit UI Frontend (`Dockerfile.ui`)**: Port `8501` (runs `streamlit run app.py --server.address 0.0.0.0 --server.port $PORT`).
+
 ---
 
-## 📊 Features & UI Capabilities
+## 🛠️ Local Development & Quickstart
 
-- **Executive Dashboard**: Key performance metrics (Total Customers, Session Churn Rate %, Risk Tiers, Real-time Customer Evaluations Table).
-- **Single Customer Prediction Form**: Interactive input fields for all 19 customer features with preset shortcuts (`High Risk`, `Loyal Customer`).
-- **Interactive Visualizations**: Speedometer gauge charts, feature importance bar charts, risk tier distribution pie charts, confusion matrix heatmaps, and ROC curves.
-- **Dual Engine Architecture**: Automatically connects to FastAPI backend (`/predict`) if available, or falls back seamlessly to the in-memory `ChurnPredictor` engine for 1-click standalone web deployments.
+### Prerequisites
+- Python 3.11+
+- Virtual Environment (`venv` or `conda`)
+
+### 1. Launch FastAPI Backend
+```bash
+# Navigate to project root
+cd telecom-churn-predictor
+
+# Create & activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start FastAPI backend
+python -m uvicorn fastapi_app:app --host 0.0.0.0 --port 8000 --reload
+```
+- **API Base URL**: `http://localhost:8000`
+- **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
+
+### 2. Launch Streamlit UI Frontend
+Open a separate terminal:
+```bash
+# Set environment variable pointing to API backend
+export API_BASE_URL=http://localhost:8000   # On Windows PowerShell: $env:API_BASE_URL="http://localhost:8000"
+
+# Start Streamlit application
+streamlit run app.py
+```
+- **Streamlit Localhost**: [http://localhost:8501](http://localhost:8501)
+
+---
+
+## 🐳 Docker & Docker Compose Deployment
+
+### Option A: Launch Full Stack via Docker Compose
+```bash
+docker-compose up --build
+```
+- Streamlit UI: `http://localhost:8501`
+- FastAPI REST API: `http://localhost:8000`
+
+### Option B: Build & Run Individual Containers
+
+#### 1. Backend API Container
+```bash
+docker build -f Dockerfile.api -t churn-predictor-api .
+docker run --rm -p 8000:8000 -e PORT=8000 churn-predictor-api
+```
+
+#### 2. Frontend UI Container
+```bash
+docker build -f Dockerfile.ui -t churn-predictor-ui .
+docker run --rm -p 8501:8501 -e PORT=8501 -e API_BASE_URL=http://host.docker.internal:8000 churn-predictor-ui
+```
+
+---
+
+## ☁️ Render Deployment Instructions
+
+Deploy two separate **Render Web Services**:
+
+### 1. Render Backend Web Service (`churn-predictor-api`)
+- **Service Type**: Web Service
+- **Environment**: Docker
+- **Dockerfile Path**: `Dockerfile.api`
+- **Port**: Render automatically injects `$PORT`.
+- **Start Command**: `uvicorn fastapi_app:app --host 0.0.0.0 --port $PORT`
+
+### 2. Render Frontend Web Service (`churn-predictor-ui`)
+- **Service Type**: Web Service
+- **Environment**: Docker
+- **Dockerfile Path**: `Dockerfile.ui`
+- **Environment Variables**:
+  - `API_BASE_URL`: `https://YOUR-BACKEND-API-SERVICE.onrender.com`
+  - `ENABLE_FALLBACK`: `false`
+- **Start Command**: `streamlit run app.py --server.address 0.0.0.0 --server.port $PORT`
+
+---
+
+## 📡 API Usage & cURL Examples
+
+### Health Check
+```bash
+curl http://localhost:8000/health
+```
+**Response**:
+```json
+{
+  "status": "healthy",
+  "service": "telecom-churn-predictor-api",
+  "model_loaded": true,
+  "scaler_loaded": true,
+  "encoder_loaded": true,
+  "model_version": "1.0.0",
+  "sha256_hashes": { ... },
+  "timestamp": "2026-08-09T19:22:00.000Z"
+}
+```
+
+### Predict Customer Churn
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "gender": "Female",
+    "SeniorCitizen": 0,
+    "Partner": "Yes",
+    "Dependents": "No",
+    "tenure": 1,
+    "PhoneService": "Yes",
+    "MultipleLines": "No",
+    "InternetService": "Fiber optic",
+    "OnlineSecurity": "No",
+    "OnlineBackup": "No",
+    "DeviceProtection": "No",
+    "TechSupport": "No",
+    "StreamingTV": "No",
+    "StreamingMovies": "No",
+    "Contract": "Month-to-month",
+    "PaperlessBilling": "Yes",
+    "PaymentMethod": "Electronic check",
+    "MonthlyCharges": 85.0,
+    "TotalCharges": 85.0
+  }'
+```
+**Response**:
+```json
+{
+  "prediction": "Churn",
+  "churn_label": 1,
+  "probability": 0.7177,
+  "confidence_score": 0.7177,
+  "risk_level": "High",
+  "model_version": "1.0.0",
+  "timestamp": "2026-08-09T19:22:00.000Z"
+}
+```
+
+---
+
+## 🔧 Environment Variables Reference
+
+| Variable Name | Default Value | Description |
+| :--- | :--- | :--- |
+| `API_BASE_URL` | `http://localhost:8000` | Target URL of deployed FastAPI backend service |
+| `ENABLE_FALLBACK` | `false` | Enable/disable in-memory fallback model if API fails |
+| `ALLOWED_ORIGINS` | `http://localhost:8501...` | Comma-separated CORS allowed origin URLs |
+| `RATE_LIMIT_PER_MINUTE` | `100` | Rate limit threshold per client IP on `/predict` |
+| `LOG_LEVEL` | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `MODEL_VERSION` | `1.0.0` | Model version indicator |
+
+---
+
+## ❓ Troubleshooting Guide
+
+### 1. Streamlit UI displays "● API Unavailable"
+- Check that the FastAPI backend server is running.
+- Verify `API_BASE_URL` environment variable matches your running API address.
+- Verify CORS allowed origins in `fastapi_app.py` includes your Streamlit host address.
+
+### 2. Plotly Charts fail to render
+- Ensure Plotly annotation layout configs do not pass unsupported `font_weight` kwargs.
+
+### 3. Model artifact loading error
+- Ensure `model.pkl`, `scaler.pkl`, `encoder.pkl`, and `metadata.json` are present in the project root directory.
+
+---
+
+## 🧪 Testing
+Run the comprehensive master automated test runner:
+```bash
+python run_all_tests.py
+```

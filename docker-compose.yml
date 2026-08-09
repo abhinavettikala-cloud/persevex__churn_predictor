@@ -1,49 +1,42 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  # 1. FastAPI Machine Learning Backend API
   api:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: telecom_churn_api
+      dockerfile: Dockerfile.api
+    container_name: churn_predictor_api
     ports:
       - "8000:8000"
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
-      - CORS_ORIGINS=http://localhost:8501
-    restart: always
+      - ALLOWED_ORIGINS=http://localhost:8501,http://127.0.0.1:8501
+      - RATE_LIMIT_PER_MINUTE=100
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
+      interval: 15s
       timeout: 5s
       retries: 3
-    networks:
-      - churn_network
+    restart: unless-stopped
 
-  # 2. Streamlit Analytical Web Dashboard
-  streamlit:
+  ui:
     build:
       context: .
-      dockerfile: Dockerfile.streamlit
-    container_name: telecom_churn_streamlit
+      dockerfile: Dockerfile.ui
+    container_name: churn_predictor_ui
     ports:
       - "8501:8501"
     environment:
+      - PORT=8501
       - API_BASE_URL=http://api:8000
+      - ENABLE_FALLBACK=false
     depends_on:
       api:
         condition: service_healthy
-    restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 15s
       timeout: 5s
       retries: 3
-    networks:
-      - churn_network
-
-networks:
-  churn_network:
-    driver: bridge
+    restart: unless-stopped
