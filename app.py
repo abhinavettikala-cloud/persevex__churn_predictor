@@ -275,14 +275,37 @@ st.markdown(f"""
         backdrop-filter: blur(12px);
     }}
 
-    .kpi-container {{
+    .kpi-container {
         background: {card_bg};
         border: 1px solid {card_border};
         border-radius: 16px;
         padding: 20px 22px;
         text-align: left;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
-    }}
+    }
+    .kpi-title {
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: {text_muted} !important;
+        margin-bottom: 8px;
+    }
+    .kpi-value {
+        font-size: 2.3rem;
+        font-weight: 800;
+        color: {text_main} !important;
+        line-height: 1.1;
+        margin-bottom: 12px;
+        letter-spacing: -0.02em;
+    }
+    .kpi-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
 
     .result-card-churn {{
         background: {result_churn_bg};
@@ -488,32 +511,32 @@ with tab_dash:
         with k1:
             st.markdown(f"""
             <div class="kpi-container" style="border-top: 4px solid #38BDF8;">
-                <div class="kpi-title">Total Evaluated Customers</div>
-                <div class="kpi-value" style="color: #38BDF8;">{total_evals:,}</div>
+                <div class="kpi-title">TOTAL EVALUATED CUSTOMERS</div>
+                <div class="kpi-value">{total_evals:,}</div>
                 <div class="kpi-badge" style="background: rgba(56, 189, 248, 0.15); color: #0284C7;">Live Tracker</div>
             </div>
             """, unsafe_allow_html=True)
         with k2:
             st.markdown(f"""
             <div class="kpi-container" style="border-top: 4px solid {danger_color};">
-                <div class="kpi-title">Predicted Churn Rate</div>
-                <div class="kpi-value" style="color: {danger_color};">{churn_rate:.1f}%</div>
+                <div class="kpi-title">PREDICTED CHURN RATE</div>
+                <div class="kpi-value">{churn_rate:.1f}%</div>
                 <div class="kpi-badge" style="background: rgba(239, 68, 68, 0.15); color: {danger_color};">{churn_count} High Risk Alerts</div>
             </div>
             """, unsafe_allow_html=True)
         with k3:
             st.markdown(f"""
             <div class="kpi-container" style="border-top: 4px solid {success_color};">
-                <div class="kpi-title">Retained Customer Count</div>
-                <div class="kpi-value" style="color: {success_color};">{retain_count:,}</div>
+                <div class="kpi-title">RETAINED CUSTOMER COUNT</div>
+                <div class="kpi-value">{retain_count:,}</div>
                 <div class="kpi-badge" style="background: rgba(16, 185, 129, 0.15); color: {success_color};">Low Risk Tier</div>
             </div>
             """, unsafe_allow_html=True)
         with k4:
             st.markdown(f"""
             <div class="kpi-container" style="border-top: 4px solid #8B5CF6;">
-                <div class="kpi-title">Avg Churn Probability</div>
-                <div class="kpi-value" style="color: #8B5CF6;">{avg_prob:.1f}%</div>
+                <div class="kpi-title">AVG CHURN PROBABILITY</div>
+                <div class="kpi-value">{avg_prob:.1f}%</div>
                 <div class="kpi-badge" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">Model Calibrated</div>
             </div>
             """, unsafe_allow_html=True)
