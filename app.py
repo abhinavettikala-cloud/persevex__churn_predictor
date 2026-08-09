@@ -28,18 +28,32 @@ st.set_page_config(
 )
 
 # -----------------------------------------------------------------------------
-# 2. Theme Preferences & Persistence System
+# 2. Session State Initialization Safeguards & Theme System
 # -----------------------------------------------------------------------------
-query_params = st.query_params
-initial_theme = "light"
-
-if "theme" in query_params:
-    param_theme = query_params["theme"].lower()
-    if param_theme in ["dark", "light"]:
-        initial_theme = param_theme
-
+# Safely initialize all required session_state keys before any access
 if "churn_predictor_theme" not in st.session_state:
+    initial_theme = "light"
+    try:
+        query_params = st.query_params
+        if "theme" in query_params:
+            param_theme = str(query_params["theme"]).lower()
+            if param_theme in ["dark", "light"]:
+                initial_theme = param_theme
+    except Exception:
+        pass
     st.session_state["churn_predictor_theme"] = initial_theme
+
+if "prediction_history" not in st.session_state:
+    st.session_state["prediction_history"] = []
+
+if "preset" not in st.session_state:
+    st.session_state["preset"] = "default"
+
+if "latest_prediction" not in st.session_state:
+    st.session_state["latest_prediction"] = None
+
+# Safely retrieve theme preference using .get() fallback
+current_theme = st.session_state.get("churn_predictor_theme", "light")
 
 # -----------------------------------------------------------------------------
 # 3. Sidebar Brand Header & Theme Toggle Control
@@ -62,17 +76,20 @@ with st.sidebar:
     theme_selection = st.radio(
         "Select Theme:",
         options=["☀️ Persevex Light", "🌙 Persevex Midnight"],
-        index=0 if st.session_state["churn_predictor_theme"] == "light" else 1,
+        index=0 if current_theme == "light" else 1,
         key="theme_radio_input"
     )
 
     selected_mode = "dark" if "Midnight" in theme_selection else "light"
-    if selected_mode != st.session_state["churn_predictor_theme"]:
+    if selected_mode != st.session_state.get("churn_predictor_theme", "light"):
         st.session_state["churn_predictor_theme"] = selected_mode
-        st.query_params["theme"] = selected_mode
+        try:
+            st.query_params["theme"] = selected_mode
+        except Exception:
+            pass
         st.rerun()
 
-    is_dark = st.session_state["churn_predictor_theme"] == "dark"
+    is_dark = st.session_state.get("churn_predictor_theme", "light") == "dark"
 
     st.markdown("---")
 
@@ -365,8 +382,8 @@ HISTORY_FILE = BASE_DIR / "evaluations_history.json"
 
 def get_history_data():
     """Retrieve history from session_state or disk."""
-    if "prediction_history" in st.session_state and isinstance(st.session_state.prediction_history, list):
-        return st.session_state.prediction_history
+    if "prediction_history" in st.session_state and isinstance(st.session_state.get("prediction_history"), list) and len(st.session_state["prediction_history"]) > 0:
+        return st.session_state["prediction_history"]
 
     history = []
     if HISTORY_FILE.exists():
@@ -388,12 +405,12 @@ def get_history_data():
         ]
         save_history_data(history)
 
-    st.session_state.prediction_history = history
+    st.session_state["prediction_history"] = history
     return history
 
 def save_history_data(history_list):
     """Save history list to session state and disk."""
-    st.session_state.prediction_history = history_list
+    st.session_state["prediction_history"] = history_list
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             json.dump(history_list, f, indent=2)
@@ -588,7 +605,7 @@ with tab_dash:
                     os.remove(HISTORY_FILE)
                 except Exception:
                     pass
-            st.session_state.prediction_history = []
+            st.session_state["prediction_history"] = []
             st.rerun()
 
     rows_html = []
@@ -655,26 +672,26 @@ with tab_predict:
     st.caption("Click a preset button to instantly populate all 19 customer features:")
 
     pcol1, pcol2, pcol3 = st.columns(3)
-    if "preset" not in st.session_state:
-        st.session_state.preset = "default"
 
     with pcol1:
         if st.button("🔥 High Risk Churner Profile", use_container_width=True):
-            st.session_state.preset = "high_risk"
+            st.session_state["preset"] = "high_risk"
     with pcol2:
         if st.button("🛡️ Loyal Customer Profile", use_container_width=True):
-            st.session_state.preset = "loyal"
+            st.session_state["preset"] = "loyal"
     with pcol3:
         if st.button("⚙️ Reset to Default", use_container_width=True):
-            st.session_state.preset = "default"
+            st.session_state["preset"] = "default"
 
-    if st.session_state.preset == "high_risk":
+    current_preset = st.session_state.get("preset", "default")
+
+    if current_preset == "high_risk":
         p_gender, p_senior, p_partner, p_dependents = "Female", 0, "No", "No"
         p_tenure, p_phone, p_multiple, p_internet = 1, "Yes", "No", "Fiber optic"
         p_sec, p_back, p_dev, p_tech, p_tv, p_mov = "No", "No", "No", "No", "No", "No"
         p_contract, p_paperless, p_payment = "Month-to-month", "Yes", "Electronic check"
         p_monthly, p_total = 85.50, 85.50
-    elif st.session_state.preset == "loyal":
+    elif current_preset == "loyal":
         p_gender, p_senior, p_partner, p_dependents = "Male", 0, "Yes", "Yes"
         p_tenure, p_phone, p_multiple, p_internet = 65, "Yes", "Yes", "DSL"
         p_sec, p_back, p_dev, p_tech, p_tv, p_mov = "Yes", "Yes", "Yes", "Yes", "Yes", "Yes"
@@ -809,15 +826,16 @@ with tab_predict:
                 }
                 add_history_record(new_entry)
 
-                st.session_state.latest_prediction = {
+                st.session_state["latest_prediction"] = {
                     "pred": pred, "prob": prob, "conf": conf, "risk": risk, "latency_ms": latency_ms
                 }
                 st.rerun()
             else:
                 st.error("Model file not found or prediction failed. Please verify that model.pkl, scaler.pkl, and encoder.pkl exist in the model directory.")
 
-    if "latest_prediction" in st.session_state:
-        res = st.session_state.latest_prediction
+    latest_pred_data = st.session_state.get("latest_prediction")
+    if latest_pred_data:
+        res = latest_pred_data
         pred, prob, conf, risk, latency_ms = res["pred"], res["prob"], res["conf"], res["risk"], res["latency_ms"]
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -901,7 +919,7 @@ with tab_hist:
                     os.remove(HISTORY_FILE)
                 except Exception:
                     pass
-            st.session_state.prediction_history = []
+            st.session_state["prediction_history"] = []
             st.rerun()
 
     if eval_history:

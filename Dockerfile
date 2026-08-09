@@ -1,8 +1,8 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
+    PORT=8501
 
 WORKDIR /app
 
@@ -15,12 +15,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code and ML pipeline artifacts
+# Copy application files and ML pipeline artifacts
 COPY app.py .
+COPY streamlit_app.py .
+COPY fastapi_app.py .
 COPY model.pkl .
 COPY scaler.pkl .
 COPY encoder.pkl .
 COPY metadata.json .
+COPY evaluations_history.json* ./
+COPY .streamlit/ ./.streamlit/
 COPY src/ ./src/
 
 # Create non-root system user for container security
@@ -28,9 +32,9 @@ RUN adduser --disabled-password --gecos "" appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8501
 
-HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-  CMD curl -f http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-8501}/_stcore/health || exit 1
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "streamlit run app.py --server.address=0.0.0.0 --server.port=${PORT:-8501} --server.headless=true"]
