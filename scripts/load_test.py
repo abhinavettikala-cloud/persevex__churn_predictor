@@ -44,7 +44,7 @@ def send_request(url: str):
 
 def run_load_test(target_url: str, num_requests: int, concurrency: int):
     print(f"\n=======================================================")
-    print(f"🚀 Launching Load Test against: {target_url}")
+    print(f" Launching Load Test against: {target_url}")
     print(f"   Total Requests: {num_requests} | Concurrency: {concurrency}")
     print(f"=======================================================\n")
 

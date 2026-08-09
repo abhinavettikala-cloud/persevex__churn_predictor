@@ -121,7 +121,13 @@ app = FastAPI(
 )
 
 # 4. Configurable CORS Security
-raw_origins = os.getenv("ALLOWED_ORIGINS", os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8501,http://127.0.0.1:8501"))
+raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:3000,http://localhost:8501,http://127.0.0.1:8501,https://persevex-churn-predictor-ui.onrender.com,https://persevex-churn-predictor-frontend.onrender.com"
+    )
+)
 if raw_origins.strip() == "*":
     allowed_origins = ["*"]
     allow_credentials = False
@@ -143,6 +149,9 @@ MAX_PAYLOAD_SIZE = int(os.getenv("MAX_PAYLOAD_SIZE_BYTES", 1048576))  # 1 MB
 
 @app.middleware("http")
 async def security_and_rate_limit_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
     req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
     request.state.request_id = req_id
     
@@ -207,6 +216,7 @@ async def security_and_rate_limit_middleware(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
