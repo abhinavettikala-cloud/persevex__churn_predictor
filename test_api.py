@@ -6,7 +6,7 @@ Tests GET /, GET /health, POST /predict (valid request and invalid payload edge 
 
 import unittest
 from fastapi.testclient import TestClient
-from app import app
+from fastapi_app import app
 
 client = TestClient(app)
 

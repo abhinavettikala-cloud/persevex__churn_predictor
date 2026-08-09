@@ -1,7 +1,7 @@
 import unittest
 import math
 from fastapi.testclient import TestClient
-from app import app
+from fastapi_app import app
 
 client = TestClient(app)
 

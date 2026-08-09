@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import threading
 import joblib
 import logging
@@ -36,20 +37,43 @@ class ArtifactLoader:
         self.load_all()
         self._initialized = True
 
+    def _resolve_path(self, path_str: str) -> str:
+        """Resolves artifact file paths robustly across OS environments."""
+        path = Path(path_str)
+        if path.is_absolute() and path.exists():
+            return str(path)
+        if path.exists():
+            return str(path)
+        
+        base_dir = Path(__file__).resolve().parent.parent.parent
+        rel_root = base_dir / path_str
+        if rel_root.exists():
+            return str(rel_root)
+        
+        rel_model_dir = base_dir / "model" / Path(path_str).name
+        if rel_model_dir.exists():
+            return str(rel_model_dir)
+            
+        return str(path)
+
     def load_all(self) -> None:
         """Loads model, scaler, and encoder artifacts into memory."""
-        logger.info(f"Loading pipeline artifacts from disk (Model: {self.model_path}, Scaler: {self.scaler_path}, Encoder: {self.encoder_path})...")
+        resolved_model = self._resolve_path(self.model_path)
+        resolved_scaler = self._resolve_path(self.scaler_path)
+        resolved_encoder = self._resolve_path(self.encoder_path)
 
-        if not os.path.exists(self.model_path):
-            raise FileNotFoundError(f"Model artifact missing at path: '{self.model_path}'")
-        if not os.path.exists(self.scaler_path):
-            raise FileNotFoundError(f"Scaler artifact missing at path: '{self.scaler_path}'")
-        if not os.path.exists(self.encoder_path):
-            raise FileNotFoundError(f"Encoder artifact missing at path: '{self.encoder_path}'")
+        logger.info(f"Loading pipeline artifacts from disk (Model: {resolved_model}, Scaler: {resolved_scaler}, Encoder: {resolved_encoder})...")
 
-        self._model = joblib.load(self.model_path)
-        self._scaler = joblib.load(self.scaler_path)
-        self._encoder = joblib.load(self.encoder_path)
+        if not os.path.exists(resolved_model):
+            raise FileNotFoundError(f"Model artifact missing at path: '{self.model_path}' (resolved: '{resolved_model}')")
+        if not os.path.exists(resolved_scaler):
+            raise FileNotFoundError(f"Scaler artifact missing at path: '{self.scaler_path}' (resolved: '{resolved_scaler}')")
+        if not os.path.exists(resolved_encoder):
+            raise FileNotFoundError(f"Encoder artifact missing at path: '{self.encoder_path}' (resolved: '{resolved_encoder}')")
+
+        self._model = joblib.load(resolved_model)
+        self._scaler = joblib.load(resolved_scaler)
+        self._encoder = joblib.load(resolved_encoder)
 
         logger.info("All pipeline artifacts loaded successfully into memory.")
 
