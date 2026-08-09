@@ -275,37 +275,37 @@ st.markdown(f"""
         backdrop-filter: blur(12px);
     }}
 
-    .kpi-container {
+    .kpi-container {{
         background: {card_bg};
         border: 1px solid {card_border};
         border-radius: 16px;
         padding: 20px 22px;
         text-align: left;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04);
-    }
-    .kpi-title {
+    }}
+    .kpi-title {{
         font-size: 0.72rem;
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: {text_muted} !important;
         margin-bottom: 8px;
-    }
-    .kpi-value {
+    }}
+    .kpi-value {{
         font-size: 2.3rem;
         font-weight: 800;
         color: {text_main} !important;
         line-height: 1.1;
         margin-bottom: 12px;
         letter-spacing: -0.02em;
-    }
-    .kpi-badge {
+    }}
+    .kpi-badge {{
         display: inline-block;
         padding: 4px 12px;
         border-radius: 12px;
         font-size: 0.78rem;
         font-weight: 700;
-    }
+    }}
 
     .result-card-churn {{
         background: {result_churn_bg};
