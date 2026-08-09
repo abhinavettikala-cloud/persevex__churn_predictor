@@ -28,7 +28,7 @@ st.set_page_config(
 )
 
 # Configuration & Environment Settings
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000").rstrip('/')
+API_BASE_URL_ENV = os.getenv("API_BASE_URL", "http://localhost:8000").strip()
 ENABLE_FALLBACK = os.getenv("ENABLE_FALLBACK", "false").lower() in ["true", "1"]
 
 # -----------------------------------------------------------------------------
@@ -58,24 +58,29 @@ if "latest_prediction" not in st.session_state:
 current_theme = st.session_state.get("churn_predictor_theme", "light")
 
 # -----------------------------------------------------------------------------
-# 3. Real API Health Check & Status Pill System
+# 3. Real API Health Check & Connectivity Status System
 # -----------------------------------------------------------------------------
 def check_api_health(url: str):
-    """Performs real HTTP GET /health check against the FastAPI backend."""
+    """
+    Performs HTTP GET /health check against the FastAPI backend.
+    Returns status tuple: (state_code, display_label, health_data)
+    """
+    if not url:
+        return "missing", "API Configuration Missing", None
     try:
-        resp = requests.get(f"{url}/health", timeout=1.5)
+        resp = requests.get(f"{url.rstrip('/')}/health", timeout=1.5)
         if resp.status_code == 200:
             data = resp.json()
             if data.get("status") == "healthy":
-                return True, "API Connected", data
-        return False, "API Degraded", None
+                return "connected", "API Connected", data
+        return "unavailable", "API Unavailable", None
     except Exception:
-        return False, "API Unavailable", None
+        return "unavailable", "API Unavailable", None
 
-api_is_online, api_status_text, api_health_data = check_api_health(API_BASE_URL)
+api_state, api_status_label, api_health_data = check_api_health(API_BASE_URL_ENV)
 
 # -----------------------------------------------------------------------------
-# 4. Sidebar Brand Header & Theme Toggle Control
+# 4. Sidebar Brand Header & Connection Control
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("""
@@ -92,10 +97,16 @@ with st.sidebar:
 
     # Real API Connectivity Status Indicator
     st.subheader("📡 Connection Telemetry")
-    if api_is_online:
+    if api_state == "connected":
         st.markdown("""
         <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10B981; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 1.1rem;">●</span> API Connected
+        </div>
+        """, unsafe_allow_html=True)
+    elif api_state == "missing":
+        st.markdown("""
+        <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #F59E0B; padding: 8px 16px; border-radius: 12px; font-weight: 800; font-size: 0.88rem; display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.1rem;">●</span> API Configuration Missing
         </div>
         """, unsafe_allow_html=True)
     elif ENABLE_FALLBACK:
@@ -537,7 +548,7 @@ with tab_dash:
                 margin=dict(l=10, r=10, t=10, b=10),
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
-            st.plotly_chart(fig_trend, width='stretch', config={'displayModeBar': False})
+            st.plotly_chart(fig_trend, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
         with d_col2:
@@ -572,7 +583,7 @@ with tab_dash:
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.25, xanchor="center", x=0.5)
             )
-            st.plotly_chart(fig_pie, width='stretch', config={'displayModeBar': False})
+            st.plotly_chart(fig_pie, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
         # HTML Table Component for Recent Customer Evaluations
@@ -582,7 +593,7 @@ with tab_dash:
             st.subheader("📋 Recent Customer Evaluations")
             st.caption(f"Showing {total_evals} saved evaluation records (saved to `evaluations_history.json`):")
         with tbl_col2:
-            if st.button("🗑️ Reset History Log", width='stretch'):
+            if st.button("🗑️ Reset History Log", use_container_width=True):
                 if HISTORY_FILE.exists():
                     try:
                         os.remove(HISTORY_FILE)
@@ -656,13 +667,13 @@ with tab_predict:
     pcol1, pcol2, pcol3 = st.columns(3)
 
     with pcol1:
-        if st.button("🔥 High Risk Churner Profile", width='stretch'):
+        if st.button("🔥 High Risk Churner Profile", use_container_width=True):
             st.session_state["preset"] = "high_risk"
     with pcol2:
-        if st.button("🛡️ Loyal Customer Profile", width='stretch'):
+        if st.button("🛡️ Loyal Customer Profile", use_container_width=True):
             st.session_state["preset"] = "loyal"
     with pcol3:
-        if st.button("⚙️ Reset to Default", width='stretch'):
+        if st.button("⚙️ Reset to Default", use_container_width=True):
             st.session_state["preset"] = "default"
 
     current_preset = st.session_state.get("preset", "default")
@@ -738,7 +749,7 @@ with tab_predict:
             total_charges = st.number_input("Total Charges ($)", min_value=0.0, max_value=10000.0, value=float(p_total), step=10.0)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        submit_button = st.form_submit_button("🚀 Run Model Churn Prediction", type="primary", width='stretch')
+        submit_button = st.form_submit_button("🚀 Run Model Churn Prediction", type="primary", use_container_width=True)
 
     if submit_button:
         payload = {
@@ -767,19 +778,20 @@ with tab_predict:
             pred, prob, conf, risk, latency_ms = None, None, None, None, 0.0
 
             # 1. Primary Path: Deployed REST API Service
-            api_endpoint = f"{API_BASE_URL}/predict"
-            try:
-                start_t = time.time()
-                resp = requests.post(api_endpoint, json=payload, timeout=3.0)
-                if resp.status_code == 200:
-                    res = resp.json()
-                    pred = res["prediction"]
-                    prob = res["probability"]
-                    conf = res["confidence_score"]
-                    risk = res["risk_level"]
-                    latency_ms = (time.time() - start_t) * 1000
-            except Exception:
-                pass
+            if API_BASE_URL_ENV:
+                api_endpoint = f"{API_BASE_URL_ENV.rstrip('/')}/predict"
+                try:
+                    start_t = time.time()
+                    resp = requests.post(api_endpoint, json=payload, timeout=3.0)
+                    if resp.status_code == 200:
+                        res = resp.json()
+                        pred = res["prediction"]
+                        prob = res["probability"]
+                        conf = res["confidence_score"]
+                        risk = res["risk_level"]
+                        latency_ms = (time.time() - start_t) * 1000
+                except Exception:
+                    pass
 
             # 2. Configurable Fallback Path (Only if ENABLE_FALLBACK=True)
             if pred is None and ENABLE_FALLBACK and standalone_predictor is not None:
@@ -814,7 +826,7 @@ with tab_predict:
                 }
                 st.rerun()
             else:
-                st.error("Prediction service is temporarily unavailable. Please try again later.")
+                st.error("Unable to connect to the prediction API. Please try again.")
 
     latest_pred_data = st.session_state.get("latest_prediction")
     if latest_pred_data:
@@ -867,7 +879,7 @@ with tab_predict:
                     margin=dict(l=20, r=20, t=30, b=20),
                     height=250
                 )
-                st.plotly_chart(fig_gauge, width='stretch', config={'displayModeBar': False})
+                st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
 
             with res_c2:
                 st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -899,7 +911,7 @@ with tab_hist:
     with h_col1:
         st.caption(f"Displaying {len(eval_history)} customer evaluation records:")
     with h_col2:
-        if st.button("🗑️ Clear History", width='stretch'):
+        if st.button("🗑️ Clear History", use_container_width=True):
             if HISTORY_FILE.exists():
                 try:
                     os.remove(HISTORY_FILE)
@@ -961,7 +973,7 @@ with tab_analytics:
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
             )
-            st.plotly_chart(fig_contract, width='stretch', config={'displayModeBar': False})
+            st.plotly_chart(fig_contract, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
         with a2:
@@ -985,7 +997,7 @@ with tab_analytics:
                 yaxis=dict(showgrid=True, gridcolor=plotly_grid, linecolor=plotly_axis, title="Count"),
                 margin=dict(l=10, r=10, t=30, b=10)
             )
-            st.plotly_chart(fig_pay, width='stretch', config={'displayModeBar': False})
+            st.plotly_chart(fig_pay, use_container_width=True, config={'displayModeBar': False})
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1012,7 +1024,7 @@ with tab_analytics:
             yaxis=dict(showgrid=False),
             margin=dict(l=10, r=20, t=10, b=10)
         )
-        st.plotly_chart(fig_corr, width='stretch', config={'displayModeBar': False})
+        st.plotly_chart(fig_corr, use_container_width=True, config={'displayModeBar': False})
         st.markdown('</div>', unsafe_allow_html=True)
     except Exception:
         st.error("Analytics are temporarily unavailable right now. Please try again.")
@@ -1115,7 +1127,7 @@ with tab_perf:
                     font=dict(family="Plus Jakarta Sans", color=plotly_text),
                     margin=dict(l=10, r=10, t=10, b=10)
                 )
-                st.plotly_chart(fig_cm, width='stretch', config={'displayModeBar': False})
+                st.plotly_chart(fig_cm, use_container_width=True, config={'displayModeBar': False})
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with pm2:
@@ -1142,7 +1154,7 @@ with tab_perf:
                     margin=dict(l=10, r=10, t=10, b=10),
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
-                st.plotly_chart(fig_roc, width='stretch', config={'displayModeBar': False})
+                st.plotly_chart(fig_roc, use_container_width=True, config={'displayModeBar': False})
                 st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.info("Model performance metrics are not available.")
@@ -1159,7 +1171,7 @@ with tab_about:
         <h4>Overview</h4>
         <p>This Streamlit application delivers production-grade customer churn prediction and risk analytics for telecommunications providers.</p>
         <ul>
-            <li><b>API Endpoint</b>: <code>{API_BASE_URL}</code></li>
+            <li><b>API Endpoint</b>: <code>{API_BASE_URL_ENV if API_BASE_URL_ENV else 'Not Configured'}</code></li>
             <li><b>Visual Theme System</b>: Dynamic dual Light/Dark mode with session persistence.</li>
             <li><b>Model Framework</b>: Scikit-learn Calibrated Logistic Regression with balanced class weighting.</li>
             <li><b>Preprocessing</b>: Standard scaling for continuous numerical features & One-Hot Encoding for categorical features.</li>
