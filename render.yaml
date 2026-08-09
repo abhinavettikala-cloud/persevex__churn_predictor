@@ -1,13 +1,26 @@
 services:
   - type: web
-    name: telecom-churn-predictor
-    env: python
-    region: oregon
+    name: persevex-churn-predictor-backend
+    env: docker
+    dockerfilePath: Dockerfile.api
     plan: free
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
+    healthCheckPath: /health
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
       - key: LOG_LEVEL
         value: INFO
+      - key: ALLOWED_ORIGINS
+        value: "https://persevex-churn-predictor-frontend.onrender.com"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "100"
+
+  - type: web
+    name: persevex-churn-predictor-frontend
+    env: docker
+    dockerfilePath: Dockerfile.ui
+    plan: free
+    healthCheckPath: /_stcore/health
+    envVars:
+      - key: API_BASE_URL
+        value: "https://persevex-churn-predictor-backend.onrender.com"
+      - key: ENABLE_FALLBACK
+        value: "false"
